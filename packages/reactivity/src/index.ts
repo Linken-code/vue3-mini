@@ -1,5 +1,7 @@
-import {shared} from "@vue/shared"
-let a=1
-export {
-	a
-}
+//入口文件
+export{
+	reactive,
+	shallowReactive,
+	readonly,
+	shallowReadonly
+} from './reactive.ts';

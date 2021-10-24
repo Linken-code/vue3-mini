@@ -4,12 +4,7 @@
 const fs = require('fs');
 const execa = require('execa');
 //获取打包目录,过滤文件夹
-const dirs = fs.readdirSync("packages").filter((p) => {
-    if (!fs.statSync(`packages/${p}`).isDirectory()) {
-        return false;
-    }
-    return p;
-})
+const dirs = fs.readdirSync("packages").filter(f => fs.statSync(`packages/${f}`).isDirectory())
 
 //进行打包,并行打包
 const build = async(target) => {
