@@ -1,5 +1,7 @@
 import { reactive, readonly } from './reactive';
-import { isObject } from '@vue/shared/src'
+import { isObject, hasOwn, isInteger, isArray } from '@vue/shared/src'
+import { Track } from './effect'
+import { TrackOpType } from './operations'
 //getter
 const createGetter = (isReadonly = false, shallow = false) => {
 	return (target, key, reaceiver) => {
@@ -8,6 +10,7 @@ const createGetter = (isReadonly = false, shallow = false) => {
 		//只读
 		if (!isReadonly) {//不是只读
 			//收集依赖 effect
+			Track(target, TrackOpType.GET, key)
 		}
 
 		//浅层
@@ -15,7 +18,7 @@ const createGetter = (isReadonly = false, shallow = false) => {
 			return res
 		}
 
-		//如果res是对象，则递归
+		//如果res是对象，则递归 称为懒代理
 		if (isObject(res)) {
 			return isReadonly ? readonly(res) : reactive(res)
 		}
@@ -32,6 +35,19 @@ const shallowReadonlyGet = createGetter(true, true)
 const createSetter = (shallow = false) => {
 	return (target, key, value, reaceiver) => {
 		const result = Reflect.set(target, key, value, reaceiver)//获取最新的值
+		//获取之前的值
+		const oldValue = target[key]
+		//判断数组
+		let hasKey = isArray(target) && isInteger(key) ?
+			Number(key) < target.length
+			: hasOwn(target, key)
+
+		if (!hasKey) {//没有key
+			//新增
+
+		} else {//修改 如果新值和原来的一样
+			//trigger(target)
+		}
 		//触发更新
 		return result
 	}

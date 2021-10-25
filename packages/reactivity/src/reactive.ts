@@ -16,17 +16,18 @@ const createReactObj = (target, isReadonly, baseHandlers) => {
 		return target
 	}
 
-	//判断是否只读
+	//判断是否只读,进行映射
 	const proxyMap = isReadonly ? readonlyMap : reactiveMap
-	const proxyEs = proxyMap.get(target)//已经代理过了
-	if (proxyEs) {
-		return proxyEs
+	//判断缓存中是否有这个对象
+	const exisitProxy = proxyMap.get(target)//已经代理过了
+	if (exisitProxy) {
+		return exisitProxy
 	}
 
 	//进行代理
 	const proxy = new Proxy(target, baseHandlers)
-	proxyMap.set(target, proxy)//存放
-
+	proxyMap.set(target, proxy)//存放代理对象
+	//返回代理对象
 	return proxy
 }
 
