@@ -1,5 +1,6 @@
 //定义effect 收集依赖，更新视图
-
+import { isArray, isInteger } from '@vue/shared/src'
+import { TriggerTypes } from './operations'
 let uid = 0 //记录id
 let activeEffect//保存当前的effect
 const effectStack = []//定义一个栈
@@ -52,4 +53,50 @@ export const Track = (target, type, key) => {
 	if (!dep.has(activeEffect)) {//没有则收集effect
 		dep.add(activeEffect)
 	}
+}
+
+//触发更新
+export const trigger = (target, type, key?, value?, oldValue?) => {
+	//触发依赖
+	const depMap = targetMap.get(target)
+	//没有值
+	if (!depMap) {
+		return
+	}
+	//有值
+	let effects = depMap.get(key)
+	let effectSet = new Set()//set可以去重
+	const add = (effectAdd) => {
+		if (effectAdd) {
+			effectAdd.forEach((item) => {
+				effectSet.add(item)
+			})
+		}
+	}
+	add(effects)
+	//处理数组 修改数组长度(length===key)
+	if (key === "length" && isArray(target)) {
+		depMap.forEach((dep, key) => {
+			//如果更改的长度小于收集的索引，那这个索引重新执行effect
+			if (key === "length" || key >= value) {
+				add(dep)
+			} else {
+				if (key != undefined) {
+					add(depMap.get(key))
+				}
+				switch (type) {
+					case TriggerTypes.ADD:
+						if (isArray(target) && isInteger(key)) {
+							add(depMap.get("length"))
+						}
+						break;
+				}
+			}
+		})
+	}
+	//执行
+	effectSet.forEach((effect: any) => effect())
+
+
+
 }

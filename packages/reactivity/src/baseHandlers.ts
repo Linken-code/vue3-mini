@@ -1,7 +1,7 @@
 import { reactive, readonly } from './reactive';
-import { isObject, hasOwn, isInteger, isArray } from '@vue/shared/src'
-import { Track } from './effect'
-import { TrackOpType } from './operations'
+import { isObject, hasOwn, isInteger, isArray, hasChange } from '@vue/shared/src'
+import { Track, trigger } from './effect'
+import { TrackOpType, TriggerTypes } from './operations'
 //getter
 const createGetter = (isReadonly = false, shallow = false) => {
 	return (target, key, reaceiver) => {
@@ -34,19 +34,23 @@ const shallowReadonlyGet = createGetter(true, true)
 //setter
 const createSetter = (shallow = false) => {
 	return (target, key, value, reaceiver) => {
-		const result = Reflect.set(target, key, value, reaceiver)//获取最新的值
 		//获取之前的值
 		const oldValue = target[key]
-		//判断数组
+		//判断是否有值
 		let hasKey = isArray(target) && isInteger(key) ?
 			Number(key) < target.length
 			: hasOwn(target, key)
-
+		//获取最新的值
+		const result = Reflect.set(target, key, value, reaceiver)
 		if (!hasKey) {//没有key
 			//新增
+			trigger(target, TriggerTypes.ADD, key, value)
+		} else {//修改 
+			//判断新值和原来是否相同
+			if (hasChange(value, oldValue)) {
+				trigger(target, TriggerTypes.SET, key, value, oldValue)
+			}
 
-		} else {//修改 如果新值和原来的一样
-			//trigger(target)
 		}
 		//触发更新
 		return result
