@@ -11,4 +11,6 @@ const build = async(target) => {
 
 }
 
+
+//打包单个模块
 build("reactivity")

@@ -1,14 +1,13 @@
 {
-    "name": "@vue/reactivity",
+    "name": "@vue/runtime-dom",
     "version": "1.0.0",
     "author": "Linken",
     "main": "index.js",
     "license": "MIT",
     "buildOptions": {
-        "name": "VueReactivity",
+        "name": "VueRuntimeDom",
         "formats": [
             "esm-bundler",
-            "cjs",
             "global"
         ]
     }
