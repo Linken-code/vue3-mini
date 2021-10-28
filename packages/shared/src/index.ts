@@ -5,6 +5,7 @@ export const isObject = (target) => {
 
 export const isInteger = (key) => parseInt(key) + '' === key
 export const isArray = Array.isArray
+export const isFunction = (target) => typeof (target) === "function"
 const hasOwnProperty = Object.prototype.hasOwnProperty
 export const hasOwn = (val: object, key: string | symbol)
 	: key is keyof typeof val => hasOwnProperty.call(val, key)

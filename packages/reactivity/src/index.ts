@@ -1,7 +1,19 @@
 //入口文件
-export{
+export {
 	reactive,
 	shallowReactive,
 	readonly,
 	shallowReadonly
-} from './reactive.ts';
+} from './reactive';
+
+export {
+	effect
+} from './effect';
+
+export {
+	ref, toRef, toRefs,
+} from './ref';
+
+export {
+	computed
+} from './computed';

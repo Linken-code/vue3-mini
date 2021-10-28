@@ -10,7 +10,7 @@ const createReactEffect = (fn, options) => {
 			try {
 				effectStack.push(effect)//入栈
 				activeEffect = effect
-				fn()//执行用户的方法
+				return fn()//执行用户的方法
 			} finally {
 				effectStack.pop() //出栈
 				activeEffect = effectStack[effectStack.length - 1]
@@ -95,7 +95,13 @@ export const trigger = (target, type, key?, value?, oldValue?) => {
 		})
 	}
 	//执行
-	effectSet.forEach((effect: any) => effect())
+	effectSet.forEach((effect: any) => {
+		if (effect.options.sch) {
+			effect.options.sch(effect) //computed的dirty=true
+		} else {
+			effect()
+		}
+	})
 
 
 
