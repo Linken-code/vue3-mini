@@ -1,1 +1,5 @@
-let aa = 1
+import { createRender } from './render'
+
+export {
+	createRender
+}

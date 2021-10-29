@@ -2,7 +2,7 @@
 export const isObject = (target) => {
 	return typeof target === 'object' && target != null
 }
-
+export const extend = Object.assign
 export const isInteger = (key) => parseInt(key) + '' === key
 export const isArray = Array.isArray
 export const isFunction = (target) => typeof (target) === "function"
