@@ -5,7 +5,7 @@ import { createRender } from "@vue/runtime-core/src"
 const renderOptionsDom = extend({ patchProps }, nodeOps)
 
 export { renderOptionsDom }
-
+//渲染初始化
 export const createApp = (rootComponent, rootProps) => {
 	let app = createRender(renderOptionsDom).createApp(rootComponent, rootProps)
 	let { mount } = app
