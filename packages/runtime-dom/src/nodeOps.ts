@@ -20,8 +20,8 @@ export const nodeOps = {
 	//选择元素
 	qureyElement: select => document.querySelector(select),
 
-	//设置元素
-	setElement: (element, text) => element.textContent = text,
+	//设置元素文本
+	setElementText: (element, text) => element.textContent = text,
 
 	//创建文本
 	createText: (text) => document.createTextNode(text),

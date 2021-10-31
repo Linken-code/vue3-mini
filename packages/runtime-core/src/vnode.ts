@@ -24,8 +24,20 @@ export const createVnode = (type, props, children = null) => {
 		children,
 		key: props && props.key,//diff用来对比
 		el: null,//虚拟dom元素
-		shapeFlag
+		component: {},
+		shapeFlag//类型标识
 	}
 	normalizeChildren(vnode, children)
 	return vnode
+}
+//判断是否为虚拟dom
+export const isVnode = (vnode) => {
+	return vnode._v_isVnode
+}
+
+export const Text = Symbol('text')
+
+export const childVnode = (child) => {
+	if (isObject(child)) return child
+	return createVnode(Text, null, String(child))
 }
