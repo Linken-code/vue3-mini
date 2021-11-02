@@ -4,3 +4,4 @@ export {
 	h,
 	createRender
 }
+export * from '@vue/reactivity'

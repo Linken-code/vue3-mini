@@ -50,7 +50,6 @@ const createSetter = (shallow = false) => {
 			if (hasChange(value, oldValue)) {
 				trigger(target, TriggerTypes.SET, key, value, oldValue)
 			}
-
 		}
 		//触发更新
 		return result

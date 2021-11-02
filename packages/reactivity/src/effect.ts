@@ -3,13 +3,13 @@ import { isArray, isInteger } from '@vue/shared/src'
 import { TriggerTypes } from './operations'
 let uid = 0 //记录id
 let activeEffect//保存当前的effect
-const effectStack = []//定义一个栈
+const effectStack = []//定义一个栈,解决effct嵌套问题
 const createReactEffect = (fn, options) => {
-	const effect = () => {//响应式的effect
-		if (!effectStack.includes(effect)) {//如果effect没有加到effectStack
+	const effectFn = () => {//响应式的effect
+		if (!effectStack.includes(effectFn)) {//如果effect没有加到effectStack
 			try {
-				effectStack.push(effect)//入栈
-				activeEffect = effect
+				effectStack.push(effectFn)//入栈
+				activeEffect = effectFn
 				return fn()//执行用户的方法
 			} finally {
 				effectStack.pop() //出栈
@@ -18,11 +18,11 @@ const createReactEffect = (fn, options) => {
 		}
 
 	}
-	effect.id = uid++;//区别effect
-	effect._isEffect = true;//区别effect是不是响应式的effect
-	effect.raw = fn;//保存用户的方法
-	effect.options = options;//保存用户的属性
-	return effect
+	effectFn.id = uid++;//区别effect
+	effectFn._isEffect = true;//区别effect是不是响应式的effect
+	effectFn.raw = fn;//保存用户的方法
+	effectFn.options = options;//保存用户的属性
+	return effectFn
 }
 
 export const effect = (fn, options: any = {}) => {
@@ -55,8 +55,16 @@ export const Track = (target, type, key) => {
 	}
 }
 
+let effectSet = new Set()//set可以去重
+const add = (effectAdd) => {
+	if (effectAdd) {
+		effectAdd.forEach((item) => {
+			effectSet.add(item)
+		})
+	}
+}
 //触发更新
-export const trigger = (target, type, key?, value?, oldValue?) => {
+export const Trigger = (target, type, key?, value?, oldValue?) => {
 	//触发依赖
 	const depMap = targetMap.get(target)
 	//没有值
@@ -65,14 +73,7 @@ export const trigger = (target, type, key?, value?, oldValue?) => {
 	}
 	//有值
 	let effects = depMap.get(key)
-	let effectSet = new Set()//set可以去重
-	const add = (effectAdd) => {
-		if (effectAdd) {
-			effectAdd.forEach((item) => {
-				effectSet.add(item)
-			})
-		}
-	}
+
 	add(effects)
 	//处理数组 修改数组长度(length===key)
 	if (key === "length" && isArray(target)) {
@@ -95,14 +96,11 @@ export const trigger = (target, type, key?, value?, oldValue?) => {
 		})
 	}
 	//执行
-	effectSet.forEach((effect: any) => {
-		if (effect.options.sch) {
-			effect.options.sch(effect) //computed的dirty=true
+	effectSet.forEach((effectFn: any) => {
+		if (effectFn.options.sch) {
+			effectFn.options.sch(effectFn) //computed的dirty=true
 		} else {
-			effect()
+			effectFn()
 		}
 	})
-
-
-
 }

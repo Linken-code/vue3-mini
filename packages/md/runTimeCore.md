@@ -1,4 +1,3 @@
-
 #### 渲染流程实现原理
 #### vue3的类型处理
 ShapeFlag.ts
@@ -34,8 +33,12 @@ if(xxx & ShapeFlags.COMPONENT){
 ```
 
 #### 初始化渲染逻辑
+
+![avatar](./images/patch.jpg)
 patch
+
 初次调用render方法时，虚拟节点类型为组件
+
 ```javascript
 const processElement = (n1, n2, container) => {
 ​
@@ -256,7 +259,6 @@ export function h(type, propsOrChildren, children) {
         }
         return createVNode(type,propsOrChildren,children);
     }
-​
 }
 ```
 

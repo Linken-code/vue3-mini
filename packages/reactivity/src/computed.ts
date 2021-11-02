@@ -1,5 +1,6 @@
 import { isFunction } from '@vue/shared';
-import { effect } from './effect';
+import { effect, Trigger, Track } from './effect';
+import { TrackOpType, TriggerTypes } from './operations'
 class ComputedRefImpl {
 	//定义属性
 	public _dirty = true;//默认执行
@@ -11,6 +12,8 @@ class ComputedRefImpl {
 			lazy: true, sch: () => {//修改数据执行sch
 				if (!this._dirty) {
 					this._dirty = true
+					//触发更新
+					Trigger(this, TriggerTypes.SET, 'value')
 				}
 			}
 		});
@@ -20,6 +23,8 @@ class ComputedRefImpl {
 		if (this._dirty) {
 			this._value = this.effect()
 			this._dirty = false
+			// 调用 track 收集依赖
+			Track(self, TrackOpType.GET, 'value')
 		}
 		return this._value;
 	}
@@ -31,9 +36,8 @@ class ComputedRefImpl {
 
 export const computed = (target: any,) => {
 	//target为1.函数2.对象
-	let getter//
-
-	let setter//
+	let getter
+	let setter
 
 	if (isFunction(target)) {
 		getter = target;
@@ -47,6 +51,4 @@ export const computed = (target: any,) => {
 		setter = target.set;
 	}
 	return new ComputedRefImpl(getter, setter)
-
-
 }

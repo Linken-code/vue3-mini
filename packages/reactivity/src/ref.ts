@@ -1,13 +1,17 @@
-import { Track, trigger } from "./effect"
+import { Track, Trigger } from "./effect"
 import { TrackOpType, TriggerTypes } from "./operations"
-import { hasChange, isArray } from '@vue/shared/src'
+import { hasChange, isArray, isObject } from '@vue/shared/src'
+import { reactive } from './reactive'
 
+const convert = (target) => {
+	return isObject(target) ? reactive(target) : target
+}
 class RefImpl {
 	public _v_isRef = true;//标识Ref
-	public _value //声明变量
+	public _value
 
 	constructor(public rawValue, public shallow) {
-		this._value = rawValue
+		this._value = convert(rawValue)
 	}
 	//getter
 	get value() {
@@ -19,14 +23,13 @@ class RefImpl {
 	//setter
 	set value(newValue) {
 		if (hasChange(newValue, this._value)) {
-			this._value = newValue
+			this._value = convert(newValue)
 			this.rawValue = newValue
-			trigger(this, TriggerTypes.SET, 'value', newValue)
+			Trigger(this, TriggerTypes.SET, 'value', newValue)
 		}
 
 	}
 }
-
 class ObjectRefImpl {
 	public _v_isRef = true
 	constructor(public target, public key) {

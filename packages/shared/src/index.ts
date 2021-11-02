@@ -8,6 +8,18 @@ export const isInteger = (key) => parseInt(key) + '' === key
 export const isArray = Array.isArray
 export const isFunction = (val: unknown): val is Function =>
 	typeof val === 'function'
+
+export const isSameVNodeType = (n1, n2) => {   // 判断是否为同一虚拟节点
+	return n1.type == n2.type && n1.key === n2.key
+}
+
+export const isReactive = (target) => {
+	return !!(target && target._isReactive)
+}
+export const isRef = (target) => {
+	return !!(target && target._v_isRef)
+}
+
 const hasOwnProperty = Object.prototype.hasOwnProperty
 export const hasOwn = (val: object, key: string | symbol)
 	: key is keyof typeof val => hasOwnProperty.call(val, key)

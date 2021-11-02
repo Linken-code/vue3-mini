@@ -1,7 +1,6 @@
-
 #### 初始化流程原理
 ####  VueRuntimeDOM
-
+![avatar](./images/runTime.png)
 #### runtime-dom
 
 Vue3中将模块分为runtime-core和其他平台对应的运行时，其中runtime-dom是专门用来解决浏览器运行时的，这个包中提供了DOM属性操作和节点操作的一系列接口

@@ -1,4 +1,4 @@
-import { isObject } from '@vue/shared/src'
+import { isObject, isReactive } from '@vue/shared/src'
 import {
 	reactiveHandlers,
 	shallowReactiveHandlers,
@@ -23,6 +23,9 @@ const createReactObj = (target, isReadonly, baseHandlers) => {
 	if (exisitProxy) {
 		return exisitProxy
 	}
+	// if (isReactive(target)) {
+	// 	return target
+	// }
 
 	//进行代理
 	const proxy = new Proxy(target, baseHandlers)

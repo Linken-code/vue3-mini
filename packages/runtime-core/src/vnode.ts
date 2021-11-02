@@ -15,8 +15,18 @@ const normalizeChildren = (vnode, children) => {
 
 //创建vnode 与h函数相同
 export const createVnode = (type, props, children = null) => {
-	let shapeFlag = isString(type) ? ShapeFlags.ELEMENT : isObject(type) ?
-		ShapeFlags.STATEFUL_COMPONENT : 0//标识
+	let shapeFlag = 0//标识
+	// let shapeFlag = isString(type) ? ShapeFlags.ELEMENT : isObject(type) ?
+	// 	ShapeFlags.STATEFUL_COMPONENT : 0//标识
+	if (isString(type)) {
+		shapeFlag = ShapeFlags.ELEMENT
+	} else if (type === Text) {
+		shapeFlag = ShapeFlags.TEXT_CHILDREN
+	} else if (type === Fragment) {
+		shapeFlag = ShapeFlags.STATEFUL_COMPONENT
+	} else {
+		shapeFlag = ShapeFlags.COMPONENT
+	}
 	const vnode = {
 		_v_isVnode: true,//是vnode节点
 		type,
@@ -37,7 +47,7 @@ export const isVnode = (vnode) => {
 
 export const Text = Symbol('text')
 
-export const childVnode = (child) => {
+export const normalizeVNode = (child) => {
 	if (isObject(child)) return child
 	return createVnode(Text, null, String(child))
 }

@@ -1,4 +1,3 @@
-
 ####   实现ref
 当我们有一个独立的原始值，例如一个字符串，我们想让它变成响应式的时候可以通过创建一个对象，将这个字符串以键值对的形式放入对象中，然后传递给 reactive。
 
@@ -79,5 +78,4 @@ class RefImpl<T> {
 
 当我们对 ref.value 进行修改时，又会触发 value 的 setter 方法，会将新旧 value 进行比较，如果值不同需要更新，则先更新新旧 value，之后通过 trigger 派发该 ref 对象的 value 属性的更新，让依赖该 ref 的副作用函数执行更新。
 
-#### 实现computed
-在文档中关于 computed api 是这样介绍的：接受一个 getter 函数，并以 getter 函数的返回值返回一个不可变的响应式 ref 对象。或者它也可以使用具有 get 和 set 函数的对象来创建一个可写的 ref 对象。
+

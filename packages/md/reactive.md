@@ -40,7 +40,10 @@ function reactive (raw) {
     }
   })
 }
+```
 实现getDep方法
+
+```javascript
 // 一个全局的Map保存 dep
 const targetMap = new Map()
 

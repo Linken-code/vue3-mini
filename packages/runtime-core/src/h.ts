@@ -19,5 +19,4 @@ export function h(type, propsOrchildren, children) {
 		}
 		return createVnode(type, propsOrchildren, children)
 	}
-
 }

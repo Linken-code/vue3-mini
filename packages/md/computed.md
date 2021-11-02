@@ -1,3 +1,5 @@
+#### 实现computed
+在文档中关于 computed api 是这样介绍的：接受一个 getter 函数，并以 getter 函数的返回值返回一个不可变的响应式 ref 对象。或者它也可以使用具有 get 和 set 函数的对象来创建一个可写的 ref 对象。
 
 #### computed 函数
 根据这个 api 的描述，显而易见的能够知道 computed 接受一个函数或是对象类型的参数，所以我们先从它的函数签名看起。
