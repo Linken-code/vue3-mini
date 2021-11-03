@@ -1,22 +1,24 @@
-import { extend } from "@vue/shared"
-import { nodeOps } from "./nodeOps"
-import { patchProps } from "./patchProp"
-import { createRender } from "@vue/runtime-core/src"
-const renderOptionsDom = extend({ patchProps }, nodeOps)
+// runtime-dom 操作节点、操作属性更新
+import { createRender } from "@vue/runtime-core/src/index";
+import { extend } from "@vue/shared/src";
+import { nodeOps } from "./nodeOps";        // 对象
+import { patchProps } from "./patchProp";    // 方法
 
-export { renderOptionsDom }
-//渲染初始化
-export const createApp = (rootComponent, rootProps) => {
-	let app = createRender(renderOptionsDom).createApp(rootComponent, rootProps)
+// 渲染时用到的所有方法
+const rendererOptions = extend({ patchProps }, nodeOps);
+export { rendererOptions }
+// vue中 runtime-core 提供了核心的方法，用来处理渲染的，他会使用runtime-dom 中的 api 进行渲染
+export function createApp(rootComponent, rootProps = null) {
+	const app = createRender(rendererOptions).createApp(rootComponent, rootProps)
 	let { mount } = app
-	app.mount = (container) => {
-		//挂载组件，清空之前的内容
-		container = nodeOps.qureyElement(container)
-		container.innerHTML = ''
-		//将组件渲染的dom元素进行挂载
-		mount(container)
+	app.mount = function (container) {
+		// 清空容器
+		container = document.querySelector(container);
+		container.innerHTML = '';
+		mount(container);   //函数劫持
+		// 将组件渲染成DOM元素，进行挂载
 	}
-	return app
+	return app;
 }
 
-export * from "@vue/runtime-core"
+export * from '@vue/runtime-core' // 后续将 runtime-core 中的方法都在这里暴露

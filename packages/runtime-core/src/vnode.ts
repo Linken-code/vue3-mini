@@ -14,7 +14,7 @@ const normalizeChildren = (vnode, children) => {
 }
 
 //创建vnode 与h函数相同
-export const createVnode = (type, props, children = null) => {
+export const createVNode = (type, props, children = null) => {
 	let shapeFlag = 0//标识
 	// let shapeFlag = isString(type) ? ShapeFlags.ELEMENT : isObject(type) ?
 	// 	ShapeFlags.STATEFUL_COMPONENT : 0//标识
@@ -49,5 +49,5 @@ export const Text = Symbol('text')
 
 export const normalizeVNode = (child) => {
 	if (isObject(child)) return child
-	return createVnode(Text, null, String(child))
+	return createVNode(Text, null, String(child))
 }

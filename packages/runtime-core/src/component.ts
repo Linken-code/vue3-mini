@@ -1,25 +1,28 @@
 import { ShapeFlags, isFunction, isObject } from '@vue/shared/src'
 import { componentPublicInstance } from './componentPublicInstance'
-const creatContext = (instance) => {
-	return {
-		attrs: instance.attrs,
-		slots: instance.slots,
-		emit: () => { },//
-		expose: () => { },
-	}
-}
-//处理render
-const finishComponentSetup = (instance) => {
+export let currentInstance
+const setupStateComponent = (instance) => {
+	// 1. 代理  传递给 render 函数的参数
+	instance.proxy = new Proxy(instance.ctx, componentPublicInstance as any)
+	// 2. 获取组件的类型，拿到组件的 setup 方法
 	let Component = instance.type
-	//判断组件是否有render
-	if (!instance.render) { //没有
-		//模板编译
-		if (!Component.render && Component.template) {
-
-		}
-		instance.render = Component.render;
+	let { setup } = Component;
+	//判断组件是否有setup
+	if (setup) {  // 有 setup 再创建执行上下文的实例
+		currentInstance = instance
+		let setupContext = createSetupContext(instance);
+		const setupResult = setup(instance.props, setupContext);
+		//setup执行完毕
+		currentInstance = null;
+		// instance 中 props attrs slots emit expose 会被提取出来，因为开发过程中会使用这些属性
+		handlerSetupResult(instance, setupResult)
+	} else {
+		finishComponentSetup(instance); // 完成组件的启动
 	}
+	//render 
+	//	Component.render(instance.proxy)//处理render
 }
+
 //处理setup返回值
 const handlerSetupResult = (instance, setupResult) => {
 	if (isFunction(setupResult)) {
@@ -27,58 +30,71 @@ const handlerSetupResult = (instance, setupResult) => {
 		instance.render = setupResult
 	} else if (isObject(setupResult)) {
 		//setup返回的对象保存到实例
-		instance.setupState = setupResult;
+		instance.setupState = setupResult
 	}
-	finishComponentSetup(instance)
+	finishComponentSetup(instance);
 }
 
-
-const setupStateComponent = (instance) => {
-	//代理
-	instance.proxy = new Proxy(instance.ctx, componentPublicInstance as any)
-	//获取组件的类型，拿到组件setup(props, context)
-	let Component = instance.type
-	let { setup } = Component
-	//判断组件是否有setup
-	if (setup) {//有
-		let setupContext = creatContext(instance)//ctx对象
-		let setupResult = setup(instance.props, setupContext)
-		//处理setup返回值，对象或render函数
-		handlerSetupResult(instance, setupResult)
-	} else {	//没有
-		finishComponentSetup(instance)
+const createSetupContext = (instance) => {
+	return {
+		attrs: instance.attrs,
+		slots: instance.slots,
+		emit: () => { },
+		expose: () => { }
 	}
-	//render 
-	Component.render(instance.proxy)//处理render
+}
+
+//处理render
+const finishComponentSetup = (instance) => {
+	let Component = instance.type
+
+	if (!instance.render) {
+		// 对template 模板编译产生render函数
+		if (!Component.render && Component.template) {
+			// 编译 将结果 赋予给 Component.template
+		}
+		instance.render = Component.render;
+	}
 }
 
 //创建组件实例
 export const createComponentInstance = (vnode) => {
-	const instance = {
-		vnode,
-		type: vnode.type,//组件的类型
-		props: {},//组件的属性
-		attr: {},//
-		setupState: {},//setup返回值
-		ctx: {},//代理
-		proxy: {},//proxy代理
-		render: false,
-		isMounted: false,//是否挂载
+	const type = vnode.type;
+	const instance = { // 组件实例
+		__v_isVNode: true,
+		vnode,          // 组件对应的虚拟节点
+		subTree: null,  // 组件要渲染的子元素
+		type,           // 组件对象
+		ctx: {},        // 组件的上下文
+		props: {},      // 组件的属性
+		attrs: {},      // 元素本身的属性
+		slots: {},      // 组件的插槽
+		setupState: {}, // 组件setup的返回值
+		isMounted: false // 组件是否被挂载？
 	}
-	instance.ctx = { _: instance }
+	instance.ctx = { _: instance };
 	return instance
 }
 
-//解析数据到组件实例
+//解析数据到组件实例,拓展instance
 export const setupComponent = (instance) => {
 	//设置值
 	const { props, children } = instance.vnode
 	//根据props解析到组件实例
-	instance.props = props
-	instance.children = children//slot插槽
-	//
-	let shapeFlag = instance.vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
-	if (shapeFlag) {//有状态的组件
+	// 根据props解析出 attrs 和 props ，将其放在 instan上
+	instance.props = props;         // 1.初始化属性 initProps()
+	instance.children = children;   // 2.初始化插槽 initSlot()
+	// 需要先看一下当前组件是不是有状态的组件，函数组件
+	let stateful = instance.vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
+	if (stateful) {  // 表示现在是一个带状态的组件
+		// 调用 当前实例的setup 方法，用setup的返回值填充 setupState 和对应的 render 方法
 		setupStateComponent(instance)
 	}
+}
+
+export const setCurrentInstance = (target) => {
+	return currentInstance = target
+}
+export const getCurrentInstance = () => {
+	return currentInstance
 }

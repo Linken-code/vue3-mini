@@ -26,4 +26,20 @@ export const hasOwn = (val: object, key: string | symbol)
 
 export const hasChange = (value, oldValue) => value !== oldValue
 
+export const invokeArrayFns = (fns, arg?: any) => {
+	for (let i = 0; i < fns.length; i++) {
+		fns[i](arg)
+	}
+}
+export const queuePostFlushCb = (cb) => { //  cb 可能是一个数组
+	queueCb(cb, pendingPostFlushCbs)
+}
+const queueCb = (cb, pendingQueue) => {
+	if (!isArray(cb)) {
+		pendingQueue.push(cb);
+	} else {
+		pendingQueue.push(...cb);
+	}
+	queueFlush();
+}
 export * from './shapeFlags'

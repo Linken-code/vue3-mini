@@ -1,8 +1,8 @@
 import { createComponentInstance, setupComponent } from './component'
 import { effect } from '@vue/reactivity'
-import { ShapeFlags } from '@vue/shared/src'
+import { ShapeFlags, invokeArrayFns, queuePostFlushCb } from '@vue/shared/src'
 import { normalizeVNode, Text } from './vnode'
-import { renderOptionsDom } from '@vue/runtime-dom/src'
+import { rendererOptions } from '@vue/runtime-dom/src'
 import { patchKeydChildren } from './diff'
 //元素操作方法
 const {
@@ -29,24 +29,41 @@ const {
 
 	//设置属性
 	patchProps
-} = renderOptionsDom
-//setupRenderEffect
+} = rendererOptions
+//给组件增加渲染effect，保证组件中数据变化可以重新进行组件的渲染
 const setupRenderEffect = (instance, container) => {
-	effect(() => {
+	instance.update = effect(() => {
 		//判断初始化
-		if (!instance.isMounted) {//首次加载
-			//获取render返回值
-			let proxy = instance.proxy
-			let subTree = instance.subTree = instance.render.call(proxy, proxy)//执行render，返回dom树
+		if (!instance.isMounted) { // 初次渲染
+			const { bm, m } = instance;//生命周期
+			if (bm) { // beforeMount
+				invokeArrayFns(bm);
+			}
+			const proxyToUse = instance.proxy; // 实例中的代理属性
+			const subTree = (instance.subTree = instance.render.call(proxyToUse, proxyToUse))//执行render，返回dom树
 			//渲染子树,创建元素
-			patch(null, subTree, container)
-			instance.isMounted = true;
-		} else {//更新
+			patch(null, subTree, container) // 渲染子树			
+			//	initialVNode.el = subTree.el; // 组件的el和子树的el是同一个
+			instance.isMounted = true;// 组件已经挂载完毕
+			if (m) { // mounted
+				invokeArrayFns(m);
+				//queuePostFlushCb(m) //异步处理,不能直接 invokeArrayFns(m);
+			}
+		} else {//更新逻辑
+			const { bu, u } = instance;
+			if (bu) { // beforeUpdate
+				invokeArrayFns(bu);
+			}
+
 			let proxy = instance.proxy
 			//旧节点
 			const prevTree = instance.subTree
 			//新节点
 			const nextTree = instance.render.call(proxy, proxy)
+			if (u) { // updated
+				invokeArrayFns(u);
+				//	queuePostFlushCb(u);//异步处理,不能直接 invokeArrayFns(u);
+			}
 			//替换节点
 			instance.subTree = nextTree
 			//对比新旧节点
@@ -94,7 +111,7 @@ const patchChildren = (n1, n2, container, anchor = null) => {
 	} else {
 		if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) { // 新老都是数组
 			if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-				patchKeydChildren(c1, c2, container, anchor); // core
+				patchKeydChildren(c1, c2, container, anchor); // 核心diff算法
 			} else {
 				// 没有新孩子
 				unmountChildren(c1);
@@ -111,7 +128,9 @@ const patchChildren = (n1, n2, container, anchor = null) => {
 		}
 	}
 }
-const patchElement = (n1, n2, container) => {
+
+const patchElement = (n1, n2) => {
+	// 两个元素相同  1.比较属性 2.比较儿子
 	let el = (n2.el = n1.el)
 	const oldProps = n1.props || {}
 	const newProps = n2.props || {}
@@ -119,32 +138,54 @@ const patchElement = (n1, n2, container) => {
 	patchChildren(n1, n2, el)
 }
 
-//组件渲染流程
-const mountComponent = (vnode, container) => {
-	//创建组件实例对象render(proxy)
-	const instance = vnode.component = createComponentInstance(vnode)
-	//解析数据到这个实例对象
-	setupComponent(instance)
-	//创建effect，让render函数执行
-	setupRenderEffect(instance, container)
+//创建组件
+const processComponent = (n1, n2, container) => {
+	if (n1 === null) {//加载组件
+		mountComponent(n2, container)
+	} else {//组件更新
+		patchElement(n1, n2)
+	}
 }
 
-//加载子元素(数组)
+//创建元素
+const processElement = (n1, n2, container) => {
+	if (n1 === null) {//挂载元素
+		mountElement(n2, container)
+	} else {//更新，同一个元素比对
+		patchElement(n1, n2)
+	}
+}
+
+//创建文本
+const processText = (n1, n2, container) => {
+	if (n1 === null) {//创建文本，渲染到页面
+		setElementText(createText(n2.children), container)
+	} else {
+		setText(n2, container)
+	}
+}
+
+const isSomeVnode = (n1, n2) => {
+	return n1.type === n2.type && n1.key === n2.key
+}
+
+//子节点的处理(数组)
 const mountChildren = (children, container) => {
 	for (let i = 0; i < children.length; i++) {
 		//['sfa'] or [h('div')]
 		const child = normalizeVNode(children[i]);
-		//递归
+		//递归处理
 		patch(null, child, container)
 	}
 }
 
-//加载元素
+//创建真实节点
 const mountElement = (vnode, container) => {
+	// 创建节点保存到vnode中 递归渲染
 	const { props, shapeFlag, type, children } = vnode
 	//获取真实元素
-	let el = createElement(type)
-	//添加属性
+	let el = vnode.el = createElement(type)
+	// 处理属性
 	if (props) {
 		for (let key in props) {
 			patchProps(el, key, null, props[key])
@@ -161,40 +202,23 @@ const mountElement = (vnode, container) => {
 	insertElement(el, container)
 }
 
-//创建组件
-const processComponent = (n1, n2, container) => {
-	if (n1 === null) {//第一次加载
-		mountComponent(n2, container)
-	} else {//组件更新
-		patchElement(n1, n2, container)
-	}
+//组件渲染流程
+const mountComponent = (initialVNode, container) => {
+	// 组件初始化
+	// 1. 先有实例,创建组件实例对象render(proxy)
+	const instance = initialVNode.component = createComponentInstance(initialVNode)
+	// 2. 需要的数据解析到实例上
+	setupComponent(instance);
+	// 3. 创建一个effect 让render执行
+	setupRenderEffect(instance, container);
 }
 
-//创建元素
-const processElement = (n1, n2, container) => {
-	if (n1 === null) {//
-		mountElement(n2, container)
-	} else {//更新，同一个元素比对
-		patchElement(n1, n2, container)
-	}
-}
-
-//创建文本
-const processText = (n1, n2, container) => {
-	if (n1 === null) {//创建文本，渲染到页面
-		setElementText(createText(n2.children), container)
-	} else {
-		setText(n2, container)
-	}
-}
-
-const isSomeVnode = (n1, n2) => {
-	return n1.type === n2.type && n1.key === n2.key
-}
-const unmount = (vnode) => {
+export const unmount = (vnode) => {
 	removeElement(vnode.el)
 }
-export const patch = (n1, n2, container) => {
+
+//操作元素
+export const patch = (n1, n2, container, anchor = null) => {
 	//区别不同类型
 	let { shapeFlag } = n2
 	//判断是否为相同元素

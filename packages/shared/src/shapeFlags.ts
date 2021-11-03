@@ -14,3 +14,15 @@ export const enum ShapeFlags {
 //1<<1表示向左移动1位 00000010
 //1<<2表示向左移动2位 00000100
 //依此类推,判断类型
+// 位运算是类型处理和权限校验的最佳实践
+//  00000001 & 00000001 => 00000001
+//  未知组件 & ShapeFlags.ELEMENT => 00000001  只要 & 出来的结果不是0，就说明他是元素组件
+// if (xxx & ShapeFlags.ELEMENT) {
+// 	处理 element
+// }
+
+//  COMPONENT = ShapeFlags.STATEFUL_COMPONENT | ShapeFlags.FUNCTIONAL_COMPONENT
+//  00000100 | 00000010 => 00000110 
+// if (xxx & ShapeFlags.COMPONENT) {
+// 	 只要 & 出来结果不为 0 ，就既可能是 状态组件 ，又可能是 函数组件
+// }
