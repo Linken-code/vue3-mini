@@ -4,6 +4,8 @@ import { extend } from "@vue/shared/src";
 import { nodeOps } from "./nodeOps";        // 对象
 import { patchProps } from "./patchProp";    // 方法
 
+export * from '@vue/runtime-core' // 后续将 runtime-core 中的方法都在这里暴露
+
 // 渲染时用到的所有方法
 const rendererOptions = extend({ patchProps }, nodeOps);
 export { rendererOptions }
@@ -20,5 +22,3 @@ export function createApp(rootComponent, rootProps = null) {
 	}
 	return app;
 }
-
-export * from '@vue/runtime-core' // 后续将 runtime-core 中的方法都在这里暴露

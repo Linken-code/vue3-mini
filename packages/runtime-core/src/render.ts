@@ -10,15 +10,3 @@ export const createRender = (renderOptionsDom) => { //渲染vnode=>render,渲染
 		createApp: apiCreateApp(render)//创建虚拟vnode
 	}
 }
-// createRenderer 与平台无关所以定义在 runtime-core 中
-// function createRender(rendererOptions) {
-// 	return {
-// 		createApp(rootComponent, rootProps) { // 用户创建app的参数
-// 			const app = {
-// 				mount(container) { // 挂载的容器
-// 				}
-// 			}
-// 			return app;
-// 		}
-// 	}
-// }
