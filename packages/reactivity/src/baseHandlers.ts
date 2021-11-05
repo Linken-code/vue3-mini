@@ -1,6 +1,6 @@
 import { reactive, readonly } from './reactive';
 import { isObject, hasOwn, isInteger, isArray, hasChange } from '@vue/shared/src'
-import { Track, trigger } from './effect'
+import { Track, Trigger } from './effect'
 import { TrackOpType, TriggerTypes } from './operations'
 //getter
 const createGetter = (isReadonly = false, shallow = false) => {
@@ -44,11 +44,11 @@ const createSetter = (shallow = false) => {
 		const result = Reflect.set(target, key, value, reaceiver)
 		if (!hasKey) {//没有key
 			//新增
-			trigger(target, TriggerTypes.ADD, key, value)
+			Trigger(target, TriggerTypes.ADD, key, value)
 		} else {//修改 
 			//判断新值和原来是否相同
 			if (hasChange(value, oldValue)) {
-				trigger(target, TriggerTypes.SET, key, value, oldValue)
+				Trigger(target, TriggerTypes.SET, key, value, oldValue)
 			}
 		}
 		//触发更新

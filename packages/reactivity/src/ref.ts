@@ -32,9 +32,7 @@ class RefImpl {
 }
 class ObjectRefImpl {
 	public _v_isRef = true
-	constructor(public target, public key) {
-
-	}
+	constructor(public target, public key) { }
 
 	//getter
 	get value() {

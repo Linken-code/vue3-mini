@@ -5,14 +5,15 @@
  - track：track函数会让当前属性收集effect
  - trigger：找到属性对应的effect，并执行
 
- ### effect副作用函数
+ ### 1.effect副作用函数
+
  vue包虽然是所有模块的整合，但是在vue中我们是拿不到effect这个方法的。也就是说，reactivity中虽然有effect方法，但是它并没有暴露给vue，所以我们只能通过响应式reactivity拿到effect函数
 
  ### effect函数存在的问题
  问题 1：函数栈执行存在的问题
  ```javascript
  const state =reactive({name:'zf',age:12,address:'回龙观'})
-effect(()=>{ // effect1      
+ effect(()=>{ // effect1      
     console.log(state.name); // 收集effect1          
     effect(()=>{ // effect2 
         console.log(state.age); // 收集effect2
@@ -28,6 +29,8 @@ effect(()=>{ // effect1
  ```
 
  ### 实现effect函数
+ 新建reactvity/src/effect.ts文件，写上
+
  ```javascript
  export function effect(fn, options: any = {}) {
     // 创建响应式effect
@@ -63,12 +66,13 @@ function createReactiveEffect(fn,options){
     return effect;
 }
 ```
+### 2.track依赖收集
 
-### track依赖收集
-operators.ts
-operators.ts的主要作用是提供TrackOpTypes和TriggerOpTypes两个枚举类型，供其他模块使用
+ 新建reactvity/src/operations.ts文件，在effect函数中引入TrackOpTypes和TriggerOrTypes两个枚举类型
+
+operations.ts的主要作用是提供TrackOpTypes和TriggerOrTypes两个枚举类型，供其他模块使用
  ```javascript
-// reactivity/src/operators.ts
+// reactivity/src/operations.ts
 export const enum TrackOptypes {
     GET
 }
@@ -102,21 +106,13 @@ export function track(target,type,key){ // 可以拿到当前的effect
     }
 }
 ```
-在getter中收集依赖
-```javascript
-// reactivity/src/baseHandler.ts
-function createGetter(isReadonly = false, shallow = false) {
-    return function get(target, key, receiver) {
-        // ...
-        if (!isReadonly) { // effect函数执行时，进行取值操作，让属性记住对应的effect函数
-            track(target, TrackOpTypes.GET, key);
-        }
-    }
-}
-```
-### trigger 触发更新
+### 3.trigger 触发更新
+
+
 trigger 找属性对应的 effect 让其执行 （数组，对象）
+
 ```javascript
+// reactivity/src/effect.ts
 export function trigger(target,type,key?,newValue?,oldValue?){
     
     // 如果这个属性，没有收集过effect，那不需要做任何操作
@@ -164,4 +160,26 @@ export function trigger(target,type,key?,newValue?,oldValue?){
 ​
 // {name:'lucky', age:22}  name => [effect,effect]
 // weakMap key => {name:'lucky', age:22} value (map) => {name => Set, age => Set}
+```
+
+最后在reactive的getter和setter中收集依赖和触发更新
+
+```javascript
+// reactivity/src/baseHandler.ts
+function createGetter(isReadonly = false, shallow = false) {
+    return function get(target, key, receiver) {
+        // ...
+        if (!isReadonly) { // effect函数执行时，进行取值操作，让属性记住对应的effect函数
+            track(target, TrackOpTypes.GET, key);
+        }
+    }
+}
+
+function createSetter(shallow = false) {     // 拦截设置功能
+    return function set(target, key, value, receiver) {
+        const result = Reflect.set(target, key, value, receiver);
+        	trigger(target, TriggerOrTypes.SET, key, value)
+        return result;
+    }
+}
 ```

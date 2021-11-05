@@ -9,69 +9,164 @@
 
 4、Proxy可以直接监听数组的变化
 
-reactive 传入一个对象，在get、set的时候都要调用getDep获取当前的dep。（如果不存在就会调用 Dep类然后保存起来）
+### 1.响应式API
+
+vue3中最核心的就是基于Proxy实现的响应式API（用于代理对象类型）
+- reactive：vue3中能够将对象变成响应式的API，不管对象有多少层
+- shallowReactive：vue3中能够将对象变成响应式的API，只代理最外层对象
+- readonly：将对象属性变为只读，且不管对象有多少层
+- shallowReadonly：将对象属性变为只读，但是只代理最外层
+
+### reactive.ts
+在reactive文件夹，新建reactvity/src/reactive.ts，入口文件为reactvity/src/index.ts，在入口文件引入reactive文件中的reative、shallowReactive等函数
+
 ```javascript
-function reactive (raw) {
-  return new Proxy(raw, {
-    get (target, key) {
-      console.log('触发get钩子', key);
-      // key 对应一个 dep
-      // dep  存储在 哪里  
-
-      const dep = getDep(target, key)
-
-      // dep 收集依赖
-      dep.depend()
-
-      // return target[key]  Object 的一些明显属于语言内部的方法移植到了 Reflect 对象上
-      return Reflect.get(target, key)
-    },
-    set (target, key, value) {
-      console.log('触发set钩子');
-      // 触发依赖
-      const dep = getDep(target, key)
-
-      const result = Reflect.set(target, key, value)
-
-      dep.notice();
-
-      // 为什么要return 数组是需要返回值的
-      return result
+// reactvity/src/index.ts
+export {
+    reactive,
+    readonly,
+    shallowReactive,
+    shallowReadonly
+} from './reactive'
+```
+在reactive.ts中引入不同的拦截函数，
+```javascript
+import {isObject} from '@vue/shared/src'
+import {
+    mutableHandlers,
+    readonlyHandlers,
+    shallowReactiveHandlers,
+    shallowReadonlyHandlers
+} from "./baseHandlers";  // 不同的拦截函数
+​
+// 是不是仅读，是不是深度，基于柯里化编程实现
+export function reactive(target) {
+    return createReactiveObject(target, false, mutableHandlers)
+}
+​
+export function shallowReactive(target) {
+    return createReactiveObject(target, false, shallowReactiveHandlers)
+}
+​
+export function readonly(target) {
+    return createReactiveObject(target, true, readonlyHandlers)
+}
+​
+export function shallowReadonly(target) {
+    return createReactiveObject(target, true, shallowReadonlyHandlers)
+}
+​
+// createReactiveObject 创建响应式对象
+function createReactiveObject(target, isReadonly, baseHandlers) {}
+```
+从源码中可以看出，reactive、shallowReactive、readonly、shallowReadonly等函数均通过createReactiveObject柯里化实现响应、只读、浅响应等功能。接下来，对createReactiveObject源码进行解剖
+### createReactiveObject 函数的实现
+```javascript
+/**
+ * createReactiveObject 创建响应式对象
+ * @param target 拦截的目标
+ * @param isReadonly 是不是仅读属性
+ * @param baseHandlers 对应的拦截函数
+ */
+​
+const reactiveMap = new WeakMap();  // 会自动垃圾回收，不会造成内存泄露，存储的key只能是对象
+const readonlyMap = new WeakMap();
+export function createReactiveObject(target,isReadonly,baseHandler){
+    // 如果目标不是对象，没法拦截，reactive 这个 API 只能拦截对象类型
+    if(!isObject(target)){
+        return target;
     }
-  })
+    // 如果某个对象已经被代理过了，就不要再代理了，也可能一个对象被代理是深度的，又被仅读代理了
+    const proxyMap = isReadonly ? readonlyMap : reactiveMap;
+    const existProxy = proxyMap.get(target);
+    if(existProxy){
+        return existProxy;  // 如果已经被代理了，直接返回即可
+    }
+    // 如果没有被代理，则基于 Proxy 实现对象代理
+    const proxy = new Proxy(target,baseHandler);
+    proxyMap.set(target,proxy);  // 将要代理的对象，和对应代理结果缓存起来
+    return proxy;
 }
 ```
-实现getDep方法
+ 在createReactiveObject中对目标进行简单判断，是否为对象、只读等，然后进行proxy代理。同时用WeakMap()把代理结果缓存起来，也通过proxyMap.get(target)获取缓存的对象，判断是否已经代理过。
+
+### 拦截函数baseHandler.ts
+baseHandler.ts中主要实现了拦截器的逻辑(getter、setter)
 
 ```javascript
-// 一个全局的Map保存 dep
-const targetMap = new Map()
-
-function getDep (target, key) {
-  let depsMap = targetMap.get(target)
-
-  // 如果不存在 target对象的Map那么保存起来
-  if (!depsMap) {
-    depsMap = new Map()
-    targetMap.set(target, depsMap)
-  }
-
-  let dep = depsMap.get(key)
-
-  // 如果不存在 key对应的dep, 也保存起来
-  if (!dep) {
-    dep = new Dep()
-    depsMap.set(key, dep)
-  }
-  // 方法dep
-  return dep
+import { isObject } from "@vue/shared";
+import { reactive, readonly } from "./reactive";
+​
+const get = createGetter();
+const shallowGet = createGetter(false, true);
+const readonlyGet = createGetter(true);
+const shallowReadonlyGet = createGetter(true, true)
+​
+const set = createSetter();
+const shallowSet = createSetter(true);
+​
+/** createGetter 拦截获取功能
+ * @param isReadonly 是不是仅读
+ * @param shallow 是不是浅响应
+ */
+function createGetter(isReadonly = false, shallow = false) {
+    return function get(target, key, receiver) {
+        // 后续Object上的方法会被迁移到 Reflect上
+        // 以前target[key] = value 方式设置值可能会失败，不会报异常，也没有返回标识
+        // Reflect 方法是具备返回值的
+        const res = Reflect.get(target, key, receiver); // target[key]
+​
+        if (!isReadonly) { // 如果是仅读的无需收集依赖，等数据变化后更新对应视图
+            console.log('依赖收集')
+        }
+​
+        if (shallow) { // 浅无需返回代理
+            return res
+        }
+​
+        if (isObject(res)) { // 取值时递归代理 vue2 是直接递归，vue3是取值时才代理，所以vue3的代理模式是懒代理
+            return isReadonly ? readonly(res) : reactive(res)
+        }
+        return res;
+    }
 }
+​
+function createSetter(shallow = false) {     // 拦截设置功能
+    return function set(target, key, value, receiver) {
+        const result = Reflect.set(target, key, value, receiver);
+        return result;
+    }
+}
+​
+export const mutableHandlers = {
+    get,
+    set
+};
+export const readonlyHandlers = {
+    get: readonlyGet,
+    set(target, key) {
+        console.warn(`Set operation on key "${String(key)}" failed: target is readonly.`)
+        return true;
+    }
+};
+export const shallowReactiveHandlers = {
+    get: shallowGet,
+    set: shallowSet
+};
+export const shallowReadonlyHandlers = {
+    get: shallowReadonlyGet,
+    set(target, key) {
+        console.warn(`Set operation on key "${String(key)}" failed: target is readonly.`)
+        return true;
+    }
+};
 ```
-我理解的是proxy 中 Reflect.get,Reflect.set在实现原来对象的方法的同时，dep.depend，dep.notice 也同时完成了自己想要的动态响应需求。
 
-只要用proxy代理的对象之后，对象的值的方法和触发都会进入get或者set方法中，那么就会触发我们的依赖收集和触发
+只要用proxy代理的对象之后，对象的值的方法和触发都会进入get或者set方法中，那么就会触发我们的依赖收集和触发更新，依赖收集和触发更新也可以独立作为effect副作用函数，详细解析请另看effect依赖收集原理
 
-### 精简vue3实现响应式
+### 下面是精简版响应式
+
+精简vue3实现响应式
 ```javascript
 let targetMap = new WeakMap()
 let effectStack = [] //存储 effect 副作用
@@ -99,10 +194,8 @@ const baseHandler = {
 
 function reactive (target) {
   const observed = new Proxy(target, baseHandler)
-
   return observed
 }
-
 
 
 // 收集依赖

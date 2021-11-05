@@ -1,8 +1,8 @@
 ## 建立vue-mini文件夹
 
-### 初始化项目yarn init -y
+### 1.初始化项目`yarn init -y`
 
-之后会有package.json文件，里面有初始化的json配置信息
+项目初始化之后会有package.json文件，里面有初始化的json配置信息
 
 ```javascript
 {
@@ -23,7 +23,7 @@
 }
 ```
 
-然后这次的例子我们创建 两个文件夹 分别为 reactivity 和shared 实现vue3的这两个功能 。并且进入这两个文件夹 分别 初始化 `yarn init -y`
+然后这次的例子我们创建 两个文件夹 分别为 reactivity 和shared，实现vue3的这两个功能 。并且进入这两个文件夹 分别 初始化 `yarn init -y`
 
 接下来 我们 要修改 reactivity 和shared 文件夹下的 package.json文件；
 
@@ -86,25 +86,25 @@ buildOptions中 name 是为了给打包为全局模块的命名， 类似于暴�
 formats 是 告诉rollup 我需要打包出多少种模块
 
 #### 其中
-cjs-->commonjs
-esm-bundler --> es6 module
-global --> 全局
+- cjs-->commonjs
+- esm-bundler --> es6 module
+- global --> 全局
+
 shared模块我们不需要打包为全局. 其实这里的name:VueShared 没有用到
 
-### 安装依赖
+### 2.安装依赖
+`npm install typescript rollup rollup-plugin-typescript2 @rollup/plugin-node-resolve @rollup/plugin-json execa -D -W`
 
-```javascript
-yarn add 
-typescript //支持typescript
-rollup //打包工具
-rollup-plugin-typescript2 //rollup解析ts
-@rollup/plugin-node-resolve //解析node第三方模块
-@rollup/plugin-json //支持引入json
-execa -D -W//开启子进程方便执行命令
-```
+- typescript //支持typescript
+- rollup //打包工具
+- rollup-plugin-typescript2 //rollup解析ts
+- @rollup/plugin-node-resolve //解析node第三方模块
+- @rollup/plugin-json //支持引入json
+- execa -D -W//开启子进程方便执行命令
 
 -D表示开发者模式 -W表示监听
-安装成功之后。我们去根 package.json中配置脚本
+
+安装成功之后。到根package.json中配置脚本
 
 ```javascript
 {
@@ -122,8 +122,7 @@ execa -D -W//开启子进程方便执行命令
   "license": "MIT"
 }
 ```
-配置scripts脚本
-在根目录的packages.json中配置scripts字段
+配置scripts脚本在根目录的packages.json中配置scripts字段
 ```javascript
 {
     "scripts": {
@@ -146,7 +145,9 @@ const fs = require('fs')
 const targets = fs.readdirSync('packages').filter(f => fs.statSync(`packages/${f}`).isDirectory())
 
 console.log('targets', targets)
+```
 然后对目标一次进行并行打包
+```javascript
 /**
  * 对目标进行依次打包，并且是并行打包
  * */
@@ -159,7 +160,9 @@ function runParaller(targets, iteratorFn){
 }
 // 执行 
 runParaller(targets, build)
+```
 对runParallel 进行一次打包返回Promise。在build中console看一下
+```javascript
 // 打包 packages 下所有包
 
 const fs = require('fs')
@@ -197,7 +200,8 @@ runParallel(targets, build)
 
 由于rollup执行的配置文件为 rollup.config.js，所有我们创建一个rollup.config.js来配置rollup执行时候的参数
 
-首先我们需要拿到 --environment传入的环境变量，我们先再rollup.config.js中console.log(process.env.TARGET) 一下，获取环境变量中的target属性 去获取 对应模块中的package.json
+首先我们需要拿到 --environment传入的环境变量，我们先再rollup.config.js中`console.log(process.env.TARGET)`一下，获取环境变量中的target属性 去获取 对应模块中的package.json
+
 // rollup 配置
 
 ```javascript
@@ -350,9 +354,10 @@ esm-bundler.js 会采用es6的方法
 
 接下来我们处理dev.js 打包单个 文件。而不是build.js打包所有。
 
-首先我们安装` yarn add minimist -D -W `来处理我们运行 yarn dev 时 传递的参数
+首先我们安装` yarn add minimist -D -W `来处理我们运行 yarn dev 时传递的参数
 
-比如我们运行 yarn dev --test=123;
+比如我们运行`yarn dev --test=123`
+
 我们再dev.js中就可以 获取到 `{test:123}`
 
 dev.js写上
@@ -404,3 +409,5 @@ async function build(target) {
 ```
 
 然后 把 reactivity/src/index.ts重新打开一下不报错了。我们 点击 安装command 鼠标左键点击 '@vue/shared' 也会跳转到 /packages/shared/src/index.ts 中
+
+`https://www.zhihu.com/people/fan-fu-lian-xu-hu-xi/posts`

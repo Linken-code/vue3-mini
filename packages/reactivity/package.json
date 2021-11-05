@@ -3,6 +3,7 @@
     "version": "1.0.0",
     "author": "Linken",
     "main": "index.js",
+    "module": "dist/reactivity.esm-bundler.js",
     "license": "MIT",
     "buildOptions": {
         "name": "VueReactivity",

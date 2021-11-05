@@ -1,7 +1,8 @@
-#### 初始化流程原理
-####  VueRuntimeDOM
-![avatar](./images/runTime.png)
+## 初始化流程原理
+###  VueRuntimeDOM
 #### runtime-dom
+
+![avatar](./images/runTime.png)
 
 Vue3中将模块分为runtime-core和其他平台对应的运行时，其中runtime-dom是专门用来解决浏览器运行时的，这个包中提供了DOM属性操作和节点操作的一系列接口
 
@@ -115,7 +116,7 @@ export const patchAttr = (el, key, value) => {
 }
 ```
 
-#### nodeOps实现
+### nodeOps实现
 nodePos中存放着所有节点的操作方法
 ```javascript
 export const nodeOps = {

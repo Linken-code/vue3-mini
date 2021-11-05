@@ -1,7 +1,7 @@
-#### 实现computed
+## 实现computed
 在文档中关于 computed api 是这样介绍的：接受一个 getter 函数，并以 getter 函数的返回值返回一个不可变的响应式 ref 对象。或者它也可以使用具有 get 和 set 函数的对象来创建一个可写的 ref 对象。
 
-#### computed 函数
+### 1.computed 函数
 根据这个 api 的描述，显而易见的能够知道 computed 接受一个函数或是对象类型的参数，所以我们先从它的函数签名看起。
 ```javascript
 export function computed<T>(getter: ComputedGetter<T>): ComputedRef<T>
@@ -13,7 +13,6 @@ export function computed<T>(
 )
 
 ```
-
 在 computed 函数的重载中，代码第一行接收 getter 类型的参数，并返回 ComputedRef 类型的函数签名是文档中描述的第一种情况，接受 getter 函数，并以 getter 函数的返回值返回一个不可变的响应式 ref 对象。
 
 而在第二行代码中，computed 函数接受一个 options 对象，并返回一个可写的 ComputedRef 类型，是文档的第二种情况，创建一个可写的 ref 对象。
@@ -77,7 +76,7 @@ export function computed<T>(
 
 在 computed api 中，首先会判断传入的参数是一个 getter 函数还是 options 对象，如果是函数的话则这个函数只能是 getter 函数无疑，此时将 getter 赋值，并且在 DEV 环境中访问 setter 不会成功，同时会报出警告。如果传入是不是函数，computed 就会将它作为一个带有 get、set 属性的对象处理，将对象中的 get、set 赋值给对应的 getter、setter。最后在处理完成后，会返回一个 ComputedRefImpl 类的实例对象，computed api 就处理完成。
 
-#### ComputedRefImpl 类
+### 2.ComputedRefImpl 类
 这个类与我们之前介绍的 RefImpl Class 类似，但构造函数中的逻辑有点区别。
 
 先看类中的成员变量：
@@ -139,3 +138,55 @@ set value(newValue: T) {
 在 computed 中，通过 getter 函数获取值时，会先执行副作用函数，并将副作用函数的返回值赋值给 _value，并将 _dirty 的值赋值给 false，这就可以保证如果 computed 中的依赖没有发生变化，则副作用函数不会再次执行，那么在 getter 时获取到的 _dirty 始终是 false，也不需要再次执行副作用函数，节约开销。之后通过 track 收集依赖，并返回 _value 的值。
 
 而在 setter 中，只是执行我们传入的 setter 逻辑，至此 computed api 的实现也已经讲解完毕了。
+
+### 下面是精简版computed
+```javascript
+// packages/reactivity/computed.ts
+import { effect, track, trigger } from './effect';
+import { isFunction } from '@vue/shared';
+class ComputedRefImpl {
+    private _value;
+    private _dirty = true; // 默认是脏值，不要用缓存的值
+    public readonly effect;
+    public readonly __v_isRef = true;
+    constructor(getter, private readonly _setter) {
+        this.effect = effect(getter, {
+            lazy: true, // 计算属性特性，默认不执行
+            scheduler: () => {
+                if (!this._dirty) { // 依赖属性变化时
+                    this._dirty = true; // 标记为脏值，触发视图更新
+                    trigger(this, 'set', 'value');
+                }
+            }
+        })
+    }
+    get value() {    // 计算属性也要收集依赖 计算属性本身就是一个effect
+        if (this._dirty) {
+            // 取值时执行effect
+            this._value = this.effect();
+            this._dirty = false;
+        }
+        track(this,  TrackOpTypes.GET ,'value'); // 进行属性依赖收集
+        return this._value
+    }
+    set value(newValue) {
+        this._setter(newValue);
+    }
+}
+​
+// vue2 和 vue3 的computed原理是不一样的
+export function computed(getterOrOptions) {
+    let getter;
+    let setter;
+    if (isFunction(getterOrOptions)) { // computed两种写法
+        getter = getterOrOptions;
+        setter = () => {
+            console.warn('computed value is readonly')
+        }
+    } else {
+        getter = getterOrOptions.get;
+        setter = getterOrOptions.set;
+    }
+    return new ComputedRefImpl(getter, setter)
+}
+```
