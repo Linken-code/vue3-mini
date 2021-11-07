@@ -1,5 +1,4 @@
-## 初始化流程原理
-###  VueRuntimeDOM
+##  VueRuntimeDOM
 #### runtime-dom
 
 ![avatar](./images/runTime.png)

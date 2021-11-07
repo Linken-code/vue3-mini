@@ -1,3 +1,4 @@
+# 初始化流程原理
 ## createApp的首次渲染
 
 ### 1.createApp入口
@@ -154,3 +155,202 @@ app.mount = (containerOrSelector) => {
 ### 下面是初始化流程图
 
 ![avatar](./images/createApp.jpg)
+
+### createApp
+createApp整体是一个闭包，因为它需要用到渲染器（render）和是否进行服务端渲染的配置（hydrate），根据不同的需求场景创建不同的app。可动态配置的闭包是vue“自古以来”很常用的一个技巧，这样的实现灵活巧妙，非常适合多platform多case的设计，让你可以通过一个入口管理多套逻辑且从对外暴露形式上看起来直观合理。
+
+createApp整体设计上是链式的，也就是说app上下文上挂载的方法最终都会把整个上下文暴露出去，从而支持开发者进行链式调用
+
+```javascript
+export function createAppAPI<HostElement>(
+  render: RootRenderFunction,
+  hydrate?: RootHydrateFunction
+): CreateAppFunction<HostElement> {
+  // 这就是我们示例里的入口createApp，接受根级组件，和组件属性
+  return function createApp(rootComponent, rootProps = null) {
+    if (rootProps != null && !isObject(rootProps)) {
+      __DEV__ && warn(`root props passed to app.mount() must be an object.`)
+      rootProps = null
+    }
+
+    // 创建vue应用上下文，上下文主要包括 应用本身，设置项，组件、指令注册仓库、混入
+    const context = createAppContext()
+    // 安装的vue插件
+    const installedPlugins = new Set()
+
+    // 应用是否已挂载
+    let isMounted = false
+
+    // 为应用上下文装载应用
+    const app: App = (context.app = {
+      _uid: uid++,
+      _component: rootComponent as ConcreteComponent,
+      _props: rootProps,
+      _container: null,
+      _context: context,
+
+      version,
+
+      get config() {
+        return context.config
+      },
+
+      set config(v) {
+        if (__DEV__) {
+          warn(
+            `app.config cannot be replaced. Modify individual options instead.`
+          )
+        }
+      },
+
+      // 装载vue插件的入口，就是把插件存入集合
+      use(plugin: Plugin, ...options: any[]) {
+        if (installedPlugins.has(plugin)) {
+          __DEV__ && warn(`Plugin has already been applied to target app.`)
+        } else if (plugin && isFunction(plugin.install)) {
+          installedPlugins.add(plugin)
+          plugin.install(app, ...options)
+        } else if (isFunction(plugin)) {
+          installedPlugins.add(plugin)
+          plugin(app, ...options)
+        } else if (__DEV__) {
+          warn(
+            `A plugin must either be a function or an object with an "install" ` +
+              `function.`
+          )
+        }
+        return app
+      },
+
+      mixin(mixin: ComponentOptions) {
+        if (__FEATURE_OPTIONS_API__) {
+          if (!context.mixins.includes(mixin)) {
+            context.mixins.push(mixin)
+            // global mixin with props/emits de-optimizes props/emits
+            // normalization caching.
+            if (mixin.props || mixin.emits) {
+              context.deopt = true
+            }
+          } else if (__DEV__) {
+            warn(
+              'Mixin has already been applied to target app' +
+                (mixin.name ? `: ${mixin.name}` : '')
+            )
+          }
+        } else if (__DEV__) {
+          warn('Mixins are only available in builds supporting Options API')
+        }
+        return app
+      },
+
+      // 全局组件注册，入参为组件名、组件options
+      component(name: string, component?: Component): any {
+        if (__DEV__) {
+          validateComponentName(name, context.config)
+        }
+        if (!component) {
+          return context.components[name]
+        }
+        if (__DEV__ && context.components[name]) {
+          warn(`Component "${name}" has already been registered in target app.`)
+        }
+        context.components[name] = component
+        return app
+      },
+
+      // 全局指令注册
+      directive(name: string, directive?: Directive) {
+        if (__DEV__) {
+          validateDirectiveName(name)
+        }
+
+        if (!directive) {
+          return context.directives[name] as any
+        }
+        if (__DEV__ && context.directives[name]) {
+          warn(`Directive "${name}" has already been registered in target app.`)
+        }
+        context.directives[name] = directive
+        return app
+      },
+
+      // 应用挂载主逻辑入口，我们在入口示例中执行的mount就是这里，指定一个dom容器
+      // 将vue应用挂载到dom上
+      mount(rootContainer: HostElement, isHydrate?: boolean): any {
+        if (!isMounted) {
+          // 创建根组件对应的vnode（虚拟dom）
+          const vnode = createVNode(
+            rootComponent as ConcreteComponent,
+            rootProps
+          )
+          // 根组件存储应用上下文
+          vnode.appContext = context
+
+          // 模块热替换HMR，定义reload重载入函数，用来在开发者环境进行重新挂载根组件，
+          // 完成应用的重载更新
+          if (__DEV__) {
+            context.reload = () => {
+              render(cloneVNode(vnode), rootContainer)
+            }
+          }
+
+          if (isHydrate && hydrate) {
+            // 服务端渲染相关
+            hydrate(vnode as VNode<Node, Element>, rootContainer as any)
+          } else {
+            // 闭包外部传入的渲染器，整个vue渲染的主逻辑控制都是render注入的
+            render(vnode, rootContainer)
+          }
+          // 标记应用已挂载
+          isMounted = true
+          // 记录根级dom容器
+          app._container = rootContainer
+          // for devtools and telemetry
+          ;(rootContainer as any).__vue_app__ = app
+
+          if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+            devtoolsInitApp(app, version)
+          }
+
+          return vnode.component!.proxy
+        } else if (__DEV__) {
+          warn(
+            `App has already been mounted.\n` +
+              `If you want to remount the same app, move your app creation logic ` +
+              `into a factory function and create fresh app instances for each ` +
+              `mount - e.g. \`const createMyApp = () => createApp(App)\``
+          )
+        }
+      },
+
+      // 应用卸载主逻辑入口
+      unmount() {
+        if (isMounted) {
+          render(null, app._container)
+          if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+            devtoolsUnmountApp(app)
+          }
+        } else if (__DEV__) {
+          warn(`Cannot unmount an app that is not mounted.`)
+        }
+      },
+
+      provide(key, value) {
+        if (__DEV__ && (key as string | symbol) in context.provides) {
+          warn(
+            `App already provides property with key "${String(key)}". ` +
+              `It will be overwritten with the new value.`
+          )
+        }
+        // TypeScript doesn't allow symbols as index type
+        // https://github.com/Microsoft/TypeScript/issues/24587
+        context.provides[key as string] = value
+
+        return app
+      }
+    })
+
+    return app
+  }
+}
+```
