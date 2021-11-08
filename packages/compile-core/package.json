@@ -1,0 +1,14 @@
+{
+    "name": "@vue/compile-core",
+    "version": "1.0.0",
+    "author": "Linken",
+    "main": "index.js",
+    "license": "MIT",
+    "buildOptions": {
+        "name": "VueCompileCore",
+        "formats": [
+            "esm-bundler",
+            "cjs"
+        ]
+    }
+}

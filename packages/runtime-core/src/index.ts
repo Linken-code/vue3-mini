@@ -4,4 +4,5 @@ export {
 	h,
 	createRender
 }
+export { queueJob, nextTick } from './scheduler'
 export * from '@vue/reactivity'

@@ -4,6 +4,7 @@ import { effect } from '@vue/reactivity'
 import { ShapeFlags, invokeArrayFns, queuePostFlushCb } from '@vue/shared/src'
 import { normalizeVNode, Text } from './vnode'
 import { patchKeydChildren } from './diff'
+import { queueJob } from './scheduler'
 export const createRender = (renderOptionsDom) => { //渲染vnode=>render,渲染时所到的api
 	//元素操作方法
 	const {
@@ -255,7 +256,7 @@ export const createRender = (renderOptionsDom) => { //渲染vnode=>render,渲染
 				//对比新旧节点
 				patch(prevTree, nextTree, container)
 			}
-		})
+		}, { sch: queueJob })
 	}
 
 	//渲染函数
