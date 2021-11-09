@@ -1,11 +1,11 @@
 {
-    "name": "@vue/compile-core",
+    "name": "@vue/compiler-dom",
     "version": "1.0.0",
     "author": "Linken",
     "main": "index.js",
     "license": "MIT",
     "buildOptions": {
-        "name": "VueCompileCore",
+        "name": "VueCompilerDom",
         "formats": [
             "esm-bundler",
             "cjs"

@@ -31,6 +31,11 @@ export const invokeArrayFns = (fns, arg?: any) => {
 		fns[i](arg)
 	}
 }
+
+export const camelize = (string) => {
+	return string.replace(/-(\w)/g, (_, c) => c ? c.toUpperCase() : '')
+}
+
 export const queuePostFlushCb = (cb) => { //  cb 可能是一个数组
 	queueCb(cb, pendingPostFlushCbs)
 }
