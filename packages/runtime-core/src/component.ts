@@ -1,5 +1,6 @@
 import { ShapeFlags, isFunction, isObject } from '@vue/shared/src'
 import { componentPublicInstance } from './componentPublicInstance'
+import { baseCompile } from '@vue/compiler-core'
 export let currentInstance
 const setupStateComponent = (instance) => {
 	// 1. 代理  传递给 render 函数的参数
@@ -52,6 +53,13 @@ const finishComponentSetup = (instance) => {
 		// 对template 模板编译产生render函数
 		if (!Component.render && Component.template) {
 			// 编译 将结果 赋予给 Component.template
+			let { template } = Component
+			if (template[0] === "#") {
+				const el = document.querySelector(template)
+				template = el ? el.innerHTML : ""
+			}
+			const code = baseCompile(template)
+			Component.render = new Function('ctx', code)
 		}
 		instance.render = Component.render;
 	}

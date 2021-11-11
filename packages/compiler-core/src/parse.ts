@@ -1,7 +1,7 @@
 import { isHTMLTag, isVoidTag } from '@vue/shared/src/domTagConfig'
 import { NodeTypes, ElementTypes, createRoot } from './ast'
 import { camelize } from '@vue/shared/src'
-export const parse = (content) => {
+export const baseParse = (content) => {
 	const context = createParseContext(content)
 	const children = parseChildren(context)
 	return createRoot(children)

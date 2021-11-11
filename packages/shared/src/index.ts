@@ -36,6 +36,10 @@ export const camelize = (string) => {
 	return string.replace(/-(\w)/g, (_, c) => c ? c.toUpperCase() : '')
 }
 
+export const capitalize = (str) => {
+	return str[0].toUpperCase() + str.slice(1).
+}
+
 export const queuePostFlushCb = (cb) => { //  cb 可能是一个数组
 	queueCb(cb, pendingPostFlushCbs)
 }

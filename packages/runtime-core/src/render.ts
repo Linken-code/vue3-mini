@@ -1,4 +1,4 @@
-import { apiCreateApp } from './apiCreateApp'
+import { createAppAPI } from './apiCreateApp'
 import { createComponentInstance, setupComponent } from './component'
 import { effect } from '@vue/reactivity'
 import { ShapeFlags, invokeArrayFns, queuePostFlushCb } from '@vue/shared/src'
@@ -273,6 +273,6 @@ export const createRender = (renderOptionsDom) => { //渲染vnode=>render,渲染
 	}
 	return {
 		render,
-		createApp: apiCreateApp(render)//创建虚拟vnode
+		createApp: createAppAPI(render)//创建虚拟vnode
 	}
 }
