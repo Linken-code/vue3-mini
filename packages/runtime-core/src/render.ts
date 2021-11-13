@@ -42,28 +42,29 @@ export const createRender = (renderOptionsDom) => { //渲染vnode=>render,渲染
 			n1 = null
 		}
 		//区别不同类型
-		let { shapeFlag } = n2
-		switch (shapeFlag) {
+		let { type, shapeFlag } = n2
+		switch (type) {
 			case Text://处理文本
 				processText(n1, n2, container)
 				break;
-			// case Fragment:
-			// 	processFragment(
-			// 		n1,
-			// 		n2,
-			// 		container,
-			// 		anchor,
-			// 		parentComponent,
-			// 		parentSuspense,
-			// 		isSVG,
-			// 		slotScopeIds,
-			// 		optimized
-			// 	)
+			// 注释
+			// case Comment:
+			// 	processCommentNode(n1, n2, container, anchor)
 			// 	break;
+			case Fragment://空标签
+				processFragment(
+					n1,
+					n2,
+					container,
+					anchor,
+				)
+				break;
 			default:
-				if (shapeFlag & shapeFlag.ELEMENT) {// 处理元素类型
+				// 普通 DOM 元素
+				if (shapeFlag & shapeFlag.ELEMENT) {
 					processElement(n1, n2, container)
-				} else if (shapeFlag & shapeFlag.STATEFUL_COMPONENT) {// 处理组件类型
+					// 自定义的 Vue 组件
+				} else if (shapeFlag & shapeFlag.COMPONENT) {
 					processComponent(n1, n2, container)
 				}
 		}
@@ -78,16 +79,45 @@ export const createRender = (renderOptionsDom) => { //渲染vnode=>render,渲染
 		}
 	}
 
+	//创建空标签
+	const processFragment = (
+		n1,
+		n2,
+		container,
+		anchor,
+
+	) => {
+		const fragmentStartAnchor = (n2.el = n1 ? n1.el : createText(''))!
+		const fragmentEndAnchor = (n2.anchor = n1 ? n1.anchor : createText(''))!
+		let { patchFlag, dynamicChildren } = n2
+		// if (patchFlag > 0) {
+		// 	optimized = true
+		// }
+		if (n1 == null) {
+			insertElement(fragmentStartAnchor, container, anchor)
+			insertElement(fragmentEndAnchor, container, anchor)
+			mountChildren(
+				n2.children,
+				container,
+			)
+		} else {
+			// 其他逻辑
+		}
+	}
+
 	//创建元素
 	const processElement = (n1, n2, container) => {
-		if (n1 === null) {//挂载元素
+		// 如果旧节点是空，进行首次渲染的挂载
+		if (n1 === null) {
 			mountElement(n2, container)
-		} else {//更新，同一个元素比对
+			// 如果不为空，进行 diff 更新
+		} else {
 			patchElement(n1, n2)
 		}
 	}
 
 	//创建组件
+	// n1 旧节点，n2 新节点
 	const processComponent = (n1, n2, container) => {
 		if (n1 === null) {//加载组件
 			mountComponent(n2, container)
@@ -214,20 +244,22 @@ export const createRender = (renderOptionsDom) => { //渲染vnode=>render,渲染
 		// 2. 需要的数据解析到实例上
 		setupComponent(instance);
 		// 3. 创建一个effect 让render执行
-		setupRenderEffect(instance, container);
+		setupRenderEffect(instance, initialVNode, container);
 	}
 
 	//给组件增加渲染effect，保证组件中数据变化可以重新进行组件的渲染
-	const setupRenderEffect = (instance, container) => {
+	const setupRenderEffect = (instance, initialVNode, container) => {
 		instance.update = effect(() => {
 			//判断初始化
 			if (!instance.isMounted) { // 初次渲染
+				const { el, props } = initialVNode
 				const { bm, m } = instance;//生命周期
 				if (bm) { // beforeMount
 					invokeArrayFns(bm);
 				}
 				const proxyToUse = instance.proxy; // 实例中的代理属性
-				const subTree = (instance.subTree = instance.render.call(proxyToUse, proxyToUse))//执行render，返回dom树
+				//执行render，返回dom树
+				const subTree = (instance.subTree = instance.render.call(proxyToUse, proxyToUse))
 				//渲染子树,创建元素
 				patch(null, subTree, container) // 渲染子树			
 				//	initialVNode.el = subTree.el; // 组件的el和子树的el是同一个

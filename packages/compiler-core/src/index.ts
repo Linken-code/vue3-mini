@@ -1,5 +1,5 @@
-import { parse } from './parse'
+import { baseParse } from './parse'
 import { baseCompile } from './compile'
-export { parse, baseCompile }
+export { baseParse, baseCompile }
 
 //console.log(parse(`<div class="foo" v-if="ok" >hello {{name}}</div>`));

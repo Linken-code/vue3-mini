@@ -87,13 +87,13 @@ export const createComponentInstance = (vnode) => {
 //解析数据到组件实例,拓展instance
 export const setupComponent = (instance) => {
 	//设置值
-	const { props, children } = instance.vnode
+	const { props, children, shapeFlag } = instance.vnode
 	//根据props解析到组件实例
 	// 根据props解析出 attrs 和 props ，将其放在 instan上
 	instance.props = props;         // 1.初始化属性 initProps()
 	instance.children = children;   // 2.初始化插槽 initSlot()
 	// 需要先看一下当前组件是不是有状态的组件，函数组件
-	let stateful = instance.vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
+	let stateful = shapeFlag & ShapeFlags.STATEFUL_COMPONENT
 	if (stateful) {  // 表示现在是一个带状态的组件
 		// 调用 当前实例的setup 方法，用setup的返回值填充 setupState 和对应的 render 方法
 		setupStateComponent(instance)
