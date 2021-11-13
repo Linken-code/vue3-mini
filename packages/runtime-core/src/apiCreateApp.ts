@@ -1,7 +1,9 @@
 import { createVNode } from "./vnode"
-
+import { camelize, capitalize } from "@vue/shared/src"
+let components
 export const createAppAPI = (render) => {
 	return function createApp(rootComponent, rootProps = null) {
+		components = rootComponent.components || {}
 		//const context = createAppContext()
 		let isMounted = false
 		const app = {
@@ -30,4 +32,11 @@ export const createAppAPI = (render) => {
 		}
 		return app;
 	}
+}
+
+export const resolveComponent = (name: string) => {
+	return (components &&
+		(components[name] ||
+			camelize(name) ||
+			capitalize(camelize(name))))
 }

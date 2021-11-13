@@ -1,4 +1,4 @@
-import { createAppAPI } from './apiCreateApp'
+import { createAppAPI, resolveComponent } from './apiCreateApp'
 import { createComponentInstance, setupComponent } from './component'
 import { effect } from '@vue/reactivity'
 import { ShapeFlags, invokeArrayFns, queuePostFlushCb } from '@vue/shared/src'

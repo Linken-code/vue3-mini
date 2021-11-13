@@ -1,6 +1,6 @@
 import { createRender } from './render'
 import { h } from './h'
-
+export { renderList } from './helpers/renderList'
 export { queueJob, nextTick } from './scheduler'
 export * from '@vue/reactivity'
 export * from '@vue/runtime-core'

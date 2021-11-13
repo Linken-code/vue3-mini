@@ -8,7 +8,7 @@ export const isInteger = (key) => parseInt(key) + '' === key
 export const isArray = Array.isArray
 export const isFunction = (val: unknown): val is Function =>
 	typeof val === 'function'
-
+export const isNumber = (val: unknown): val is Number => typeof val === 'number'
 export const isSameVNodeType = (n1, n2) => {   // 判断是否为同一虚拟节点
 	return n1.type == n2.type && n1.key === n2.key
 }
