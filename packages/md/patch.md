@@ -111,8 +111,79 @@ app.mount('#demo')
 - 默认情况下next是null，父组件调用processComponent触发当前调用的时候会是VNode，此时next为null；
 - 调用当前实例beforeUpdate钩子函数；调用要更新的Vnode(next)的父组件的beforeUpdate钩子函数；
 - 获取当前实例的vNode => prevTree；获取要更新的vNode=> nextTree；然后调用patch；
+```javascript
+const patch: PatchFn = (
+  n1,
+  n2,
+  container,
+  anchor = null,
+  parentComponent = null,
+  parentSuspense = null,
+  isSVG = false,
+  slotScopeIds = null,
+  optimized = false
+) => {
+  // patching & 不是相同类型的 VNode，则从节点树中卸载
+  if (n1 && !isSameVNodeType(n1, n2)) {
+    anchor = getNextHostNode(n1)
+    unmount(n1, parentComponent, parentSuspense, true)
+    n1 = null
+  }
+	// PatchFlag 是 BAIL 类型，则跳出优化模式
+  if (n2.patchFlag === PatchFlags.BAIL) {
+    optimized = false
+    n2.dynamicChildren = null
+  }
 
-调用patch函数的过程，也就是根据VNode的type，走不同的支流的过程；点击change按钮：
+  const { type, ref, shapeFlag } = n2
+  switch (type) { // 根据 Vnode 类型判断
+    case Text: // 文本类型
+      processText(n1, n2, container, anchor)
+      break
+    case Comment: // 注释类型
+      processCommentNode(n1, n2, container, anchor)
+      break
+    case Static: // 静态节点类型
+      if (n1 == null) {
+        mountStaticNode(n2, container, anchor, isSVG)
+      }
+      break
+    case Fragment: // Fragment 类型
+      processFragment(/* 忽略参数 */)
+      break
+    default:
+      if (shapeFlag & ShapeFlags.ELEMENT) { // 元素类型
+        processElement(
+          n1,
+          n2,
+          container,
+          anchor,
+          parentComponent,
+          parentSuspense,
+          isSVG,
+          slotScopeIds,
+          optimized
+        )
+      } else if (shapeFlag & ShapeFlags.COMPONENT) { // 组件类型
+        processComponent(/* 忽略参数 */)
+      } else if (shapeFlag & ShapeFlags.TELEPORT) { // TELEPORT 类型
+        ;(type as typeof TeleportImpl).process(/* 忽略参数 */)
+      }
+  }
+}
+
+
+```
+一起来看上面 👆 patch 函数的源码，我们先从入参看起：n1 与 n2 是待比较的两个节点，n1 为旧节点，n2 为新节点。container 是新节点的容器，而 anchor 是一个锚点，用来标识当我们对新旧节点做增删或移动等操作时，以哪个节点为参照物。optimized 参数是是否开启优化模式的标识。其他参数就不一一介绍了，我们暂时不用关心。
+
+我们看第一个 if 条件，当旧节点存在，并且新旧节点不是同一类型时，则将旧节点从节点树中卸载。这就是我们可以总结出的 patch 的第一个逻辑: 当两个节点的类型不同，则直接卸载旧节点。
+
+再看第二个 if 分支条件，如果新节点的 patchFlag 的值是 BAIL ，优化模式会被关闭。这是我们第一次在源码中遇到 patchFlag，不过不用太细究这里，我们接着往下看。
+
+接下来 patch 函数会通过 switch case 来判断节点类型，并分别对不同节点类型执行不同的操作。
+
+
+点击change按钮：
 
 n1的值：
 ![avatar](./images/patch1.awebp)
@@ -288,22 +359,152 @@ const processElement = (
         optimized: boolean
     ) => {
         isSVG = isSVG || (n2.type as string) === 'svg'
+        // 如果旧节点不存在
         if (n1 == null) {
-            // first render
+           mountElement(
+               n2,
+               container,
+               anchor
+             /* 后续参数省略 */
+           )
+           // 如果新旧节点对比
         } else {
             patchElement(n1, n2, parentComponent, parentSuspense, isSVG, optimized)
         }
     }
 
 ```
-如上代码，会直接调用patchElement，此时参数为：
+如上代码，会直接调用patchElement，源码如下
 
+```javascript
+ const patchElement = (n1, n2, anchor) => {
+     // 两个元素相同  1.比较属性 2.比较儿子
+     let el = (n2.el = n1.el);
+     const oldProps = n1.props || {};
+     const newProps = n2.props || {};
+     patchProps(oldProps, newProps, el)
+     patchChildren(n1, n2, el, anchor);
+ }
+```
+
+此时参数为：
 - n1: 老的change按钮构成的VNode对象；
 - n2：新的change按钮构成的VNode对象；
 - parentComponent: instance实例；
 - parentSuspense: null；
 - isSVG: false；
 - optimized: true；
+
+
+在元素类型的 patch 过程中，Vue3 首先会将新旧节点的 props 声明提取出来，因为之后需要对 props 进行 patch 比较
+## 更新属性
+之后开始比较 props，如果此时元素被标记过 patchFlag，则会通过 patchFlag 进行按需比较，否则会全量的 diff 元素中的 props。
+```javascript
+if (patchFlag > 0) {
+  if (patchFlag & PatchFlags.FULL_PROPS) {
+    // 如果元素的 props 中含有动态的 key，则需要全量比较
+    patchProps(
+      el,
+      n2,
+      oldProps,
+      newProps,
+      parentComponent,
+      parentSuspense,
+      isSVG
+    )
+  } else {
+    if (patchFlag & PatchFlags.CLASS) {
+      if (oldProps.class !== newProps.class) {
+        hostPatchProp(el, 'class', null, newProps.class, isSVG)
+      }
+    }
+
+    if (patchFlag & PatchFlags.STYLE) {
+      hostPatchProp(el, 'style', oldProps.style, newProps.style, isSVG)
+    }
+
+    if (patchFlag & PatchFlags.PROPS) {
+      const propsToUpdate = n2.dynamicProps!
+      for (let i = 0; i < propsToUpdate.length; i++) {
+        const key = propsToUpdate[i]
+        const prev = oldProps[key]
+        const next = newProps[key]
+        if (
+          next !== prev ||
+          (hostForcePatchProp && hostForcePatchProp(el, key))
+        ) {
+          hostPatchProp(
+            el,
+            key,
+            prev,
+            next,
+            isSVG,
+            n1.children as VNode[],
+            parentComponent,
+            parentSuspense,
+            unmountChildren
+          )
+        }
+      }
+    }
+  }
+
+  if (patchFlag & PatchFlags.TEXT) {
+    if (n1.children !== n2.children) {
+      hostSetElementText(el, n2.children as string)
+    }
+  }
+} else if (!optimized && dynamicChildren == null) {
+  patchProps(
+    el,
+    n2,
+    oldProps,
+    newProps,
+    parentComponent,
+    parentSuspense,
+    isSVG
+  )
+}
+
+```
+```javascript
+const patchProps = (oldProps, newProps, el) => {
+    if (oldProps !== newProps) {
+        // 新的属性 需要覆盖掉老的
+        for (let key in newProps) {
+            const prev = oldProps[key];
+            const next = newProps[key];
+            if (prev !== next) {
+                hostPatchProp(el, key, prev, next);
+            }
+        }
+        // 老的有的属性 新的没有 将老的删除掉
+        for (const key in oldProps) {
+            if (!(key in newProps)) {
+                hostPatchProp(el, key, oldProps[key], null);
+            }
+        }
+    }
+}
+```
+
+我们一起来捋一捋上方的分支条件，并看看 patchFlag 此时做了些什么。
+
+- 当 patchFlag 为 FULL_PROPS 时，说明此时的元素中，可能包含了动态的 key ，需要进行全量的 props diff。
+
+- 当 patchFlag 为 CLASS 时，当新旧节点的 class 不一致时，此时会对 class 进行 patch，而当新旧节点的 class 属性完全一致时，不需要进行任何操作。这个 Flag 标记会在元素有动态的 class 绑定时加入。
+
+- 当 patchFlag 为 STYLE 时，会对 style 进行更新，这是每次 patch 都会进行的，这个 Flag 会在有动态 style 绑定时被加入。
+
+- 当 patchFlag 为 PROPS 时，需要注意这个 Flag 会在元素拥有动态的属性或者 attrs 绑定时添加，不同于 class 和 style，这些动态的prop 或 attrs 的 key 会被保存下来以便于更快速的迭代。
+
+- PROPS 的比较会将新节点的动态属性提取出来，并遍历这个这个属性中所有的 key，当新旧属性不一致，或者该 key 需要强制更新时，则调用 hostPatchProp 对属性进行更新。
+
+- 当 patchFlag 为 TEXT 时，如果新旧节点中的子节点是文本发生变化，则调用 hostSetElementText 进行更新。这个 flag 会在元素的子节点只包含动态文本时被添加。
+
+此时当元素拥有 patchFlag 时的分支判断就结束了，我们可以在这些分支判断中，体会到 patchFlag 为 patch 算法的速度提升所做出的努力。
+
+分支走到最后一个 else，若当前不存在优化标记，并且动态子节点也不存在，则直接对 props 进行全量 diff，通过 patchProps 这个函数完成。
 
 ## patchChildren
 现在再来说第一次循环，执行patch的时候，newVNode的type为Symbol(Fragment) => ul，此时还是会走到processFragment函数，不过此时的dynamicChildren为空，会继续运行到patchChildren函数。
@@ -388,37 +589,47 @@ const patchKeyedChildren = (
 ) => {
     let i = 0
     const l2 = c2.length
-    let e1 = c1.length - 1 
-    let e2 = l2 - 1 
+    let e1 = c1.length - 1 // prev ending index
+    let e2 = l2 - 1  // next ending index
 
     while (i <= e1 && i <= e2) {
         const n1 = c1[i]
         const n2 = (c2[i] = optimized ? cloneIfMounted(c2[i] as VNode) : normalizeVNode(c2[i]))
+        // 比较 n1 与 n2 是否是同一类型的 VNode
         if (isSameVNodeType(n1, n2)) {
        		patch(n1,n2,container,null,parentComponent,parentSuspense,isSVG,optimized)
         } else {
+             // 如果 n1 与 n2 不是同一类型，则 break 出 while 循环
             break
         }
+          // 递增 i
         i++
     }
 
     while (i <= e1 && i <= e2) {
         const n1 = c1[e1]
         const n2 = (c2[e2] = optimized ? cloneIfMounted(c2[e2] as VNode) : normalizeVNode(c2[e2]))
+         // 比较 n1 与 n2 是否是同一类型的 VNode
         if (isSameVNodeType(n1, n2)) {
             patch(n1,n2,container,null,parentComponent,parentSuspense,isSVG,optimized)
         } else {
+             // 如果 n1 与 n2 不是同一类型，则 break 出 while 循环
             break
         }
+         // 完成 patch 操作后，尾部索引递减
         e1--
         e2--
     }
-
+// 当旧子节点被遍历完
     if (i > e1) {
+        // 新节点还有元素未被遍历完
         if (i <= e2) {
             const nextPos = e2 + 1
+            // 确定好锚点元素
             const anchor = nextPos < l2 ? (c2[nextPos] as VNode).el : parentAnchor
+             // 遍历剩余的新子节点
             while (i <= e2) {
+                // patch 时第一个参数传入 null，代表没有旧节点，直接将新节点插入即可
                 patch(
                     null,
                     (c2[i] = optimized
@@ -434,35 +645,53 @@ const patchKeyedChildren = (
             }
         }
     }
-
+// 如果新子节点已被遍历完
     else if (i > e2) {
+        // 就子节点未被遍历完
         while (i <= e1) {
+// 调用 unmount 卸载旧子节点
             unmount(c1[i], parentComponent, parentSuspense, true)
+            // 递增索引
             i++
         }
     }
 
     else {
-        const s1 = i
-        const s2 = i 
+        const s1 = i // 旧子节点的起始索引
+        const s2 = i // 新子节点的起始索引
+        // 对新子节点，创建一个索引的 map 对象
+        const keyToNewIndexMap: Map<string | number, number> = new Map()
         for (i = s2; i <= e2; i++) {
             const nextChild = (c2[i] = optimized ? cloneIfMounted(c2[i] as VNode) : normalizeVNode(c2[i]))
             if (nextChild.key != null) {
-                keyToNewIndexMap.set(nextChild.key, i)
+                // 如果是 DEV 环境，且 keyToNewIndexMap 已经存在当前节点的 key 值，则警告。
+              if (__DEV__ && keyToNewIndexMap.has(nextChild.key)) {
+                warn(
+                 `Duplicate keys found during update:`,
+                  JSON.stringify(nextChild.key),
+                 `Make sure keys are unique.`
+                )
+              }
+               // 以新子节点的 key 为键，索引为值，存入 map。
+               keyToNewIndexMap.set(nextChild.key, i)
             }
         }
 
+/**
+ * 遍历旧子节点，尝试 patch 比较需要被 patch 的节点，并且移除不会再出现的子节点
+ */
         let j
         let patched = 0
         const toBePatched = e2 - s2 + 1
-        let moved = false
-        let maxNewIndexSoFar = 0
+        let moved = false// 用于跟踪是否有节点发生移动
+        let maxNewIndexSoFar = 0// 用于确定最长递增子序列
         const newIndexToOldIndexMap = new Array(toBePatched)
         for (i = 0; i < toBePatched; i++) newIndexToOldIndexMap[i] = 0
 
         for (i = s1; i <= e1; i++) {
             const prevChild = c1[i]
             if (patched >= toBePatched) {
+                // 所有新节点都被 patch 了，所以剩下的只需要移除
                 unmount(prevChild, parentComponent, parentSuspense, true)
                 continue
             }
@@ -470,6 +699,7 @@ const patchKeyedChildren = (
             if (prevChild.key != null) {
                 newIndex = keyToNewIndexMap.get(prevChild.key)
             } else {
+                // 对于找不到 key 的节点，尝试去定位相同 type 的节点
                 for (j = s2; j <= e2; j++) {
                     if (
                         newIndexToOldIndexMap[j - s2] === 0 &&
@@ -483,12 +713,15 @@ const patchKeyedChildren = (
             if (newIndex === undefined) {
                 unmount(prevChild, parentComponent, parentSuspense, true)
             } else {
+                // 在 newIndexToOldIndexMap 记录下被 patch 的节点的索引
                 newIndexToOldIndexMap[newIndex - s2] = i + 1
+                 // 如果 newIndex 的索引大于最远移动的索引，则更新
                 if (newIndex >= maxNewIndexSoFar) {
                     maxNewIndexSoFar = newIndex
-                } else {
+                } else {// 否则标记 moved 为 true
                     moved = true
                 }
+                  // 对新旧子节点进行 patch
                 patch(
                     prevChild,
                     c2[newIndex] as VNode,
@@ -499,20 +732,26 @@ const patchKeyedChildren = (
                     isSVG,
                     optimized
                 )
+                // patch 完毕后，递增 patched 计数。
                 patched++
             }
         }
-
+/**
+ * 移动和挂载
+ */
+// 当节点被移动时，创建最长递增子序列
         const increasingNewIndexSequence = moved
             ? getSequence(newIndexToOldIndexMap)
             : EMPTY_ARR
         j = increasingNewIndexSequence.length - 1
+        // 为了能方便的获取锚点，选择从后向前遍历
         for (i = toBePatched - 1; i >= 0; i--) {
             const nextIndex = s2 + i
             const nextChild = c2[nextIndex] as VNode
             const anchor =
                 nextIndex + 1 < l2 ? (c2[nextIndex + 1] as VNode).el : parentAnchor
             if (newIndexToOldIndexMap[i] === 0) {
+                // 如果在 newIndexToOldIndexMap 中找不到对应的索引，则新增节点
                 patch(
                     null,
                     nextChild,
@@ -523,6 +762,7 @@ const patchKeyedChildren = (
                     isSVG
                 )
             } else if (moved) {
+                // 如果不是一个稳定的子序列，或者当前节点不在递增子序列上时，需要移动
                 if (j < 0 || i !== increasingNewIndexSequence[j]) {
                     move(nextChild, container, anchor, MoveType.REORDER)
                 } else {
