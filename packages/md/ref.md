@@ -49,6 +49,9 @@ import { track, trigger } from "./effect";
 import { TrackOpTypes, TriggerOpTypes } from "./operations";
 import { reactive } from "./reactive";
 ​
+​export const hasChanged = (value: any, oldValue: any): boolean =>
+  value !== oldValue && (value === value || oldValue === oldValue)
+
 export function ref(value) { // value 是一个基本数据类型
     // 将 普通类型 变成一个 对象类型 
     return createRef(value);
@@ -58,13 +61,17 @@ export function shallowRef(value) { // shallowRef Api
     return createRef(value, true);
 }
 function createRef(rawValue, shallow = false) {
+     if (isRef(rawValue)) {
+       return rawValue
+     }
     return new RefImpl(rawValue, shallow)
 }
 ​
 const convert = (val) => isObject(val) ? reactive(val) : val; // 递归响应式
-​
+
+
 class RefImpl {
-   private _value: T//私有变量
+  private _value: T//私有变量
 
   public readonly __v_isRef = true; // 公共变量。产生的实例会被添加 __v_isRef 表示是一个 ref 属性
 
@@ -89,15 +96,17 @@ class RefImpl {
     }
 }
 ```
-在 RefImpl 类中，有一个私有变量 _value 用来存储 ref 的最新的值；公共的只读变量 __v_isRef 是用来标识该对象是一个 ref 响应式对象的标记与在讲述 reactive api 时的 ReactiveFlag 相同。
+- createRef函数内部会先对value进行判断，如果已经是ref对象的话，直接返回当前value，否则就调用new RefImpl来生成ref对象进行返回。
 
-而在 RefImpl 的构造函数中，接受一个私有的 _rawValue 变量，存放 ref 的旧值；公共的 _shallow 变量是区分是否为浅层响应的。在构造函数内部，先判断 _shallow 是否为 true，如果是 shallowRef ，则直接将原始值赋值给 _value，否则会通过 convert 进行转换再赋值。
+- 在 RefImpl 类中，有一个私有变量 _value 用来存储 ref 的最新的值；公共的只读变量 __v_isRef 是用来标识该对象是一个 ref 响应式对象的标记与在讲述 reactive api 时的 ReactiveFlag 相同。
 
-在 conver 函数的内部，其实就是判断传入的参数是否是一个对象，如果是一个对象则通过 reactive api 创建一个代理对象并返回，否则直接返回原参数。
+- 而在 RefImpl 的构造函数中，接受一个私有的 _rawValue 变量，存放 ref 的旧值；公共的 _shallow 变量是区分是否为浅层响应的。在构造函数内部，先判断 _shallow 是否为 true，如果是 shallowRef ，则直接将原始值赋值给 _value，否则会通过 convert 进行转换再赋值。
 
-当我们通过 ref.value 的形式读取该 ref 的值时，就会触发 value 的 getter 方法，在 getter 中会先通过 track 收集该 ref 对象的 value 的依赖，收集完毕后返回该 ref 的值。
+- convert里面则会对val进行判断了，对象则调用reactive，否则直接返回val，此处也就可以看到上面ref也可以接受对象作为参数的缘由了。
 
-当我们对 ref.value 进行修改时，又会触发 value 的 setter 方法，会将新旧 value 进行比较，如果值不同需要更新，则先更新新旧 value，之后通过 trigger 派发该 ref 对象的 value 属性的更新，让依赖该 ref 的副作用函数执行更新。
+- 当我们通过 ref.value 的形式读取该 ref 的值时，就会触发 value 的 getter 方法，在 getter 中会先通过 track 收集该 ref 对象的 value 的依赖，收集完毕后返回该 ref 的值。
+
+- 当我们对 ref.value 进行修改时，又会触发 value 的 setter 方法，会调用hasChanged判断新旧 value 是否发生了改变，此处会对NaN进行check，因为NaN与啥都不相等；设置新的值，如果值不同需要更新，则先更新新旧 value，之后通过 trigger 派发该 ref 对象的 value 属性的更新，让依赖该 ref 的副作用函数执行更新。
 
 ### 2.实现toRefs
 将对象（数组）中的属性转换成ref属性，实现批量转化
@@ -112,9 +121,15 @@ class ObjectRefImpl{
         this._object[this._key] = newVal
     }
 }
-export function toRef(object,key){
-    return new ObjectRefImpl(object,key);
+export function toRef<T extends object, K extends keyof T>(
+  object: T,
+  key: K
+): Ref<T[K]> {
+  return isRef(object[key])
+    ? object[key]
+    : (new ObjectRefImpl(object, key) as any)
 }
+
 export function toRefs(object) { // object可能是数组或对象
     const ret = isArray(object) ? new Array(object.length) : {};
     for (const key in object) {

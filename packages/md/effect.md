@@ -161,6 +161,28 @@ export function trigger(target,type,key?,newValue?,oldValue?){
 // {name:'lucky', age:22}  name => [effect,effect]
 // weakMap key => {name:'lucky', age:22} value (map) => {name => Set, age => Set}
 ```
+如上，就是effect部分的源码。顺着执行顺序一步步走下来。
+- 调用方调用effect函数，参数为函数fn，options(默认为{})；
+- 判断是否已经是effect过的函数，如果是的话，则直接把原函数返回。
+- 调用createReactiveEffect生成当前fn对应的effect函数，把上面的参数fn和options直接传进去；
+- 判断options里面的lazy是否是false，如果不是懒处理，就直接调用下对应的effect函数；
+- 返回生成的effect函数。
+
+接下来看下createReactiveEffect函数的调用过程。
+
+- 为effect函数赋值，暂时先不考虑reactiveEffect函数内部到底干了什么，只要明白创建了个函数，并赋值给了effect变量。
+- 然后为effect函数添加属性：id, _isEffect, active, raw, deps, options
+- 把effect返回了。
+
+下面我们回到上面非lazy情况下，调用effect，此时就会执行reactiveEffect函数。
+
+- 首先判断了是否是active状态，如果不是，说明当前effect函数已经处于失效状态，直接返回`return options.scheduler ? undefined : fn()`。
+- 查看调用栈effectStack里面是否有当前effect，如果无当前effect，接着执行下面的代码。
+- 先调用cleanup，把当前所有依赖此effect的全部清掉，deps是个数组，元素为Set，Set里面放的则是ReactiveEffect，也就是effect；
+- 把当前effect入栈，并将当前effect置为当前活跃effect->activeEffect；后执行fn函数；
+- finally，把effect出栈，执行完成了，把activeEffect还原到之前的状态；
+- 其中涉及到调用轨迹栈的记录。和shouldTrack是否需要跟踪轨迹的处理。
+
 
 最后在reactive的getter和setter中收集依赖和触发更新
 

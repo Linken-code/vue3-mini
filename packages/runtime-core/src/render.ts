@@ -279,14 +279,14 @@ export const createRender = (renderOptionsDom) => { //渲染vnode=>render,渲染
 				const prevTree = instance.subTree
 				//新节点
 				const nextTree = instance.render.call(proxy, proxy)
-				if (u) { // updated
-					invokeArrayFns(u);
-					//	queuePostFlushCb(u);//异步处理,不能直接 invokeArrayFns(u);
-				}
 				//替换节点
 				instance.subTree = nextTree
 				//对比新旧节点
 				patch(prevTree, nextTree, container)
+				if (u) { // updated
+					invokeArrayFns(u);
+					//	queuePostFlushCb(u);//异步处理,不能直接 invokeArrayFns(u);
+				}
 			}
 		}, { sch: queueJob })
 	}

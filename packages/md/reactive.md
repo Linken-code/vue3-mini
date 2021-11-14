@@ -109,34 +109,89 @@ const shallowSet = createSetter(true);
  * @param isReadonly 是不是仅读
  * @param shallow 是不是浅响应
  */
-function createGetter(isReadonly = false, shallow = false) {
-    return function get(target, key, receiver) {
-        // 后续Object上的方法会被迁移到 Reflect上
-        // 以前target[key] = value 方式设置值可能会失败，不会报异常，也没有返回标识
-        // Reflect 方法是具备返回值的
-        const res = Reflect.get(target, key, receiver); // target[key]
-​
-        if (!isReadonly) { // 如果是仅读的无需收集依赖，等数据变化后更新对应视图
-            console.log('依赖收集')
-        }
-​
-        if (shallow) { // 浅无需返回代理
-            return res
-        }
-​
-        if (isObject(res)) { // 取值时递归代理 vue2 是直接递归，vue3是取值时才代理，所以vue3的代理模式是懒代理
-            return isReadonly ? readonly(res) : reactive(res)
-        }
-        return res;
+​function createGetter(isReadonly = false, shallow = false) {
+  return function get(target: Target, key: string | symbol, receiver: object) {
+    if (key === ReactiveFlags.IS_REACTIVE) {
+      return !isReadonly
+    } else if (key === ReactiveFlags.IS_READONLY) {
+      return isReadonly
+    } else if (
+      key === ReactiveFlags.RAW &&
+      receiver === (isReadonly ? readonlyMap : reactiveMap).get(target)
+    ) {
+      return target
     }
-}
-​
-function createSetter(shallow = false) {     // 拦截设置功能
-    return function set(target, key, value, receiver) {
-        const result = Reflect.set(target, key, value, receiver);
-        return result;
+
+    const targetIsArray = isArray(target)
+    if (targetIsArray && hasOwn(arrayInstrumentations, key)) {
+      return Reflect.get(arrayInstrumentations, key, receiver)
     }
+    // 后续Object上的方法会被迁移到 Reflect上
+    // 以前target[key] = value 方式设置值可能会失败，不会报异常，也没有返回标识
+    // Reflect 方法是具备返回值的
+    const res = Reflect.get(target, key, receiver)// target[key]
+
+    const keyIsSymbol = isSymbol(key)
+    if (
+      keyIsSymbol
+        ? builtInSymbols.has(key as symbol)
+        : key === `__proto__` || key === `__v_isRef`
+    ) {
+      return res
+    }
+
+    if (!isReadonly) { // 如果是仅读的无需收集依赖，等数据变化后更新对应视图
+      track(target, TrackOpTypes.GET, key)
+    }
+
+    if (shallow) {// 浅无需返回代理
+      return res
+    }
+
+    if (isRef(res)) {// 是ref返回值
+      const shouldUnwrap = !targetIsArray || !isIntegerKey(key)
+      return shouldUnwrap ? res.value : res
+    }
+
+    if (isObject(res)) { // 取值时递归代理 vue2 是直接递归，vue3是取值时才代理，所以vue3的代理模式是懒代理
+      return isReadonly ? readonly(res) : reactive(res)
+    }
+
+    return res
+  }
 }
+
+function createSetter(shallow = false) {
+  return function set(
+    target: object,
+    key: string | symbol,
+    value: unknown,
+    receiver: object
+  ): boolean {
+    const oldValue = (target as any)[key]
+    if (!shallow) {
+      value = toRaw(value)
+      if (!isArray(target) && isRef(oldValue) && !isRef(value)) {
+        oldValue.value = value
+        return true
+      }
+    } else {}
+
+    const hadKey = isArray(target) && isIntegerKey(key)
+        ? Number(key) < target.length
+        : hasOwn(target, key)
+    const result = Reflect.set(target, key, value, receiver)
+    if (target === toRaw(receiver)) {
+      if (!hadKey) {
+        trigger(target, TriggerOpTypes.ADD, key, value)
+      } else if (hasChanged(value, oldValue)) {
+        trigger(target, TriggerOpTypes.SET, key, value, oldValue)
+      }
+    }
+    return result
+  }
+}
+
 ​
 export const mutableHandlers = {
     get,
@@ -161,6 +216,30 @@ export const shallowReadonlyHandlers = {
     }
 };
 ```
+
+setter函数工厂，根据shallow生成set函数。set函数接受4个参数：target为目标对象；key为设置的属性；value为设置的值；receiver为Reflect的额外参数(如果遇到 setter，receiver则为setter调用时的this值)。
+
+- 首先获取到oldValue；
+- 如果非浅响应式，也就是正式情况的时候，获取到value的原始对象并赋值给value，如果target对象不是数组且oldValue是ref类型的响应式类型，并且新value不是ref类型的响应式，为oldValue赋值(ref类型的响应式对象，需要为对象的value赋值)。
+- 下面也就是深度响应式的代码逻辑了。
+- 如果是数组并且key是数字类型的，则直接判断下标，否则调用hasOwn获取，是否包含当前key => hadKey;
+- 调用Reflect.set进行设置值；
+- 如果目标对象和receiver的原始对象相等，则hadKey，调用trigger触发add操作；否则，调用trigger触发set操作。
+- 把set处理的结果返回，result。
+
+getter函数工厂，根据shallow生成get函数。get函数接受3个参数：target为目标对象；key为设置的属性；receiver为Reflect的额外参数(如果遇到 setter，receiver则为setter调用时的this值)。
+
+- 如果key是__v_isReactive，则直接返回!isReadonly，通过上面的图可得知，reactive相关的调用createGetter，传递的是false，也就是会直接返回true；
+- 如果key是__v_isReadonly，则直接返回isReadonly，同样的通过上面的图可以得知，readonly相关的调用createGetter，传递的是true，也就是会直接返回true；
+- 如果key是__v_raw并且receiver等于proxyMap存储的target对象的proxy，也就是获取原始对象，则直接返回target；
+- 如果是数组的话，则会走自定义的方法，arrayInstrumentations；arrayInstrumentations是和Vue2中对数组的改写是一样的逻辑；
+- 下面会对key进行判断，如果Symbol对象并且是Set里面自定义的方法；或者key为__proto__或__v_isRef，则直接把`Reflect.get(target, key, receiver)`获取到的值直接返回；
+- 如果非只读情况下，调用track跟踪get轨迹；
+- 如果是shallow，非深度响应式，也是直接把上面获取到的res直接返回；
+- 如果是ref对象，则会调用.value获取值进行返回；
+- 剩下的情况下，如果得到的res是个对象，则根据isReadonly调用readonly或reactive获取值，进行返回；
+- 最后有一个res保底返回；
+
 
 只要用proxy代理的对象之后，对象的值的方法和触发都会进入get或者set方法中，那么就会触发我们的依赖收集和触发更新，依赖收集和触发更新也可以独立作为effect副作用函数，详细解析请另看effect依赖收集原理
 

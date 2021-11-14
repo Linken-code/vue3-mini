@@ -2,7 +2,7 @@
 
 ![avatar](./images/createApp.jpg)
 
-### 1.createApp
+### 1.回顾上一章的createApp
 createApp整体是一个闭包，因为它需要用到渲染器（render）和是否进行服务端渲染的配置（hydrate），根据不同的需求场景创建不同的app。可动态配置的闭包是vue“自古以来”很常用的一个技巧，这样的实现灵活巧妙，非常适合多platform多case的设计，让你可以通过一个入口管理多套逻辑且从对外暴露形式上看起来直观合理。
 
 createApp整体设计上是链式的，也就是说app上下文上挂载的方法最终都会把整个上下文暴露出去，从而支持开发者进行链式调用
@@ -201,8 +201,39 @@ export function createAppAPI<HostElement>(
     return app
   }
 }
+
+export function createAppContext(): AppContext {
+  return {
+    app: null as any,
+    config: {
+      isNativeTag: NO,
+      performance: false,
+      globalProperties: {},
+      optionMergeStrategies: {},
+      isCustomElement: NO,
+      errorHandler: undefined,
+      warnHandler: undefined
+    },
+    mixins: [],
+    components: {},
+    directives: {},
+    provides: Object.create(null)
+  }
+}
 ```
 
+如上，就是createAppAPI的源码，直接返回了一个函数createApp。createApp：
+
+- 对传递进来的第二个参数，也就是root props进行校验；
+- 调用createAppContext创建appContext对象，赋值给context；
+- 创建变量installedPlugins，Set类型，存储已经安装过的插件；
+- isMounted设为false；
+- 创建app，挂载属性和函数；
+- 返回app；
+
+此时的app属于Vue的一个准备阶段，为后面的mount等操作准备好了所需要使用到的函数。
+
+![avatar](./images/createAppAPI.awebp)
 
 ### 2.mount的执行过程
 
