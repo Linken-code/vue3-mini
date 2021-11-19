@@ -1,7 +1,7 @@
 import Link from './components/link'
 import View from './components/view'
 let Vue
-VueRouter.install = function (_vue) {
+export const install = function (_vue) {
 	Vue = _vue
 	const isDef = (v) => v !== undefined
 	Vue.mixin({
@@ -43,3 +43,4 @@ VueRouter.install = function (_vue) {
 	Vue.component('router-view', View)
 
 }
+

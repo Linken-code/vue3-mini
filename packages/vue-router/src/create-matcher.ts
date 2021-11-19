@@ -7,7 +7,7 @@ export const createMatcher = (routes, router) => {
 	const { nameMap, pathMap, pathList } = createRouteMap(routes);
 
 	const match = (raw, currentRoute, redirect) => {
-		const location = normalizeLocation()
+		const location = normalizeLocation(raw, current, append = false, router)
 		const { name } = location
 
 		if (name) {
@@ -22,13 +22,15 @@ export const createMatcher = (routes, router) => {
 				}
 			}
 		}
+		return _createRoute(null, location)
+
 	}
 
 	const addRoutes = () => {
 
 	}
 
-	const _createRoute = (record, location, redirect) => {
+	const _createRoute = (record, location, redirect = null) => {
 		return createRoute(record, location, redirect, router)
 	}
 	return {
@@ -36,7 +38,23 @@ export const createMatcher = (routes, router) => {
 	}
 }
 
-const matchRoute = (regex, path, params) => {
+const matchRoute = (regex, path, params: Object): Boolean => {
+	const m = path.match(regex)
+
+	if (!m) {
+		return false
+	} else if (!params) {
+		return true
+	}
+
+	for (let i = 1; i < m.length; i++) {
+		const key = regex.keys[i - 1]
+		const val = typeof m[i] === 'string' ? decodeURIComponent(m[i]) : m[i]
+		if (key) {
+			params[key.name || 'patchMatch'] = val
+		}
+	}
+
 	return true
 }
 

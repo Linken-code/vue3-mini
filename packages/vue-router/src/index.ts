@@ -5,18 +5,20 @@ import { HashHistory } from './history/hash'
 import { HTML5history } from './history/html5'
 import { inBrowser } from '.util/dom'
 class VueRouter {
-	private options
-	private current
-	private routes
-	private mode
-	private matcher
-	private app
-	private apps
-	private fallback
-	private history
+	public options
+	public mode
+	public matcher
+	public app
+	public apps
+	public fallback
+	public history
+	public beforeHooks
+	public afterHooks
 	constructor(options: any = {}) {
 		this.app = null
 		this.apps = []
+		this.beforeHooks = []
+		this.afterHooks = []
 		this.options = options
 		this.matcher = createMatcher(options.routes || [], this)
 		let mode = options.mode || 'hash'
@@ -26,7 +28,7 @@ class VueRouter {
 		}
 		this.mode = mode
 
-		switch (mode) {
+		switch (this.mode) {
 			case 'hash':
 				this.history = new HashHistory(this, options.base, this.fallback)
 				break;
@@ -52,20 +54,58 @@ class VueRouter {
 			history.transitionTo(history.getCurrentLocation(), setupHashListener, setupHashListener)
 		}
 
-
 		history.listen((route) => {
 			this.apps.forEach((app) => {
 				app._route = route
 			})
 		})
 
-		match(raw, current, redirect) {
-			return this.matcher.match(raw, current, redirect)
+	}
+	match(raw, current, redirect) {
+		return this.matcher.match(raw, current, redirect)
+	}
+
+	push(location, onComplete?: Function, onAbort?: Function) {
+		if (!onComplete && !onAbort && typeof Promise !== 'undefined') {
+			return new Promise((resole, reject) => {
+				this.history.push(location, resole, reject)
+			})
+		} else {
+			this.history.push(location, onComplete, onAbort)
 		}
 	}
 
+	replace(location, onComplete?: Function, onAbort?: Function) {
+		if (!onComplete && !onAbort && typeof Promise !== 'undefined') {
+			return new Promise((resole, reject) => {
+				this.history.replace(location, resole, reject)
+			})
+		} else {
+			this.history.replace(location, onComplete, onAbort)
+		}
+	}
 
+	go(n: number) { this.history.go(n) }
+	back() { this.history.go(-1) }
+	forward() { this.history.go(1) }
+
+	beforeEach(fn) {
+		return registerhook(this.beforeHooks, fn)
+	}
+
+	afterEach(fn) {
+		return registerhook(this.afterHooks, fn)
+	}
 }
+
+const registerhook = (list, fn) => {
+	list.push(fn)
+	return () => {
+		const i = list.indexOf(fn)
+		if (i > -1) list.splice(i, 1)
+	}
+}
+
 VueRouter.install = install
 export default VueRouter;
 
