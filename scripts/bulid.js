@@ -14,14 +14,14 @@ const build = async(target) => {
 }
 
 const runParaller = async(dirs, itemfn) => {
-    let result = []
-        //遍历
-    for (let item of dirs) {
-        result.push(itemfn(item))
+        let result = []
+            //遍历
+        for (let item of dirs) {
+            result.push(itemfn(item))
+        }
+        return Promise.all(result) //存放打包的promise，等待这里的打包执行完毕之后，调用成功
     }
-    return Promise.all(result) //存放打包的promise，等待这里的打包执行完毕之后，调用成功
-}
-
+    //打包全部文件
 runParaller(dirs, build)
     .then(() => { //promise
         console.log("打包成功");
