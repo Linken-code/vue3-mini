@@ -34,20 +34,21 @@
 
    //导出配置
    const createConfig = (format, output) => {
-       //进行打包
-       output.name = packageOptions.name
-       output.sourcemap = true
-           //生成rollup配置
-       return {
-           input: resolve("src/index.ts"), //入口文件
-           output,
-           plugins: [
-               json(), //解析json
-               ts({ //解析ts
-                   tsconfig: path.resolve(__dirname, "tsconfig.json")
-               }),
-               resolvePlugin() //解析第三方插件
-           ]
+           //进行打包
+           output.name = packageOptions.name
+           output.sourcemap = true
+               //生成rollup配置
+           return {
+               input: resolve("src/index.ts"), //入口文件
+               output,
+               plugins: [
+                   json(), //解析json
+                   ts({ //解析ts
+                       tsconfig: path.resolve(__dirname, "tsconfig.json")
+                   }),
+                   resolvePlugin() //解析第三方插件
+               ]
+           }
        }
-   }
+       //rollup导出配置
    export default packageOptions.formats.map(format => createConfig(format, outputOPtions[format]))

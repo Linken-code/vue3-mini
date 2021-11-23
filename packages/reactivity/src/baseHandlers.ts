@@ -4,9 +4,9 @@ import { Track, Trigger } from './effect'
 import { TrackOpType, TriggerTypes } from './operations'
 //getter
 const createGetter = (isReadonly = false, shallow = false) => {
-	return (target, key, reaceiver) => {
+	return (target, key, receiver) => {
 		//反射
-		const res = Reflect.get(target, key, reaceiver)
+		const res = Reflect.get(target, key, receiver)
 		//只读
 		if (!isReadonly) {//不是只读
 			//收集依赖 effect
@@ -25,7 +25,7 @@ const createGetter = (isReadonly = false, shallow = false) => {
 		return res
 	}
 }
-//get params 1、true只读 2、true浅层
+//get params 1、true只读readonly 2、true浅层shallow
 const get = createGetter()
 const shallowGet = createGetter(false, true)
 const readonlyGet = createGetter(true)
@@ -33,7 +33,7 @@ const shallowReadonlyGet = createGetter(true, true)
 
 //setter
 const createSetter = (shallow = false) => {
-	return (target, key, value, reaceiver) => {
+	return (target, key, value, receiver) => {
 		//获取之前的值
 		const oldValue = target[key]
 		//判断是否有值
@@ -41,7 +41,7 @@ const createSetter = (shallow = false) => {
 			Number(key) < target.length
 			: hasOwn(target, key)
 		//获取最新的值
-		const result = Reflect.set(target, key, value, reaceiver)
+		const result = Reflect.set(target, key, value, receiver)
 		if (!hasKey) {//没有key
 			//新增
 			Trigger(target, TriggerTypes.ADD, key, value)
@@ -66,18 +66,18 @@ export const reactiveHandlers = {
 }
 export const shallowReactiveHandlers = {
 	get: shallowGet,
-	shallowSet
+	set: shallowSet
 }
 export const readonlyHandlers = {
 	get: readonlyGet,
 	set: (target, key, value) => {
-		console.log("set on key is fail");
+		console.log(`set on key ${key} is failed!`);
 	}
 }
 export const shallowReadonlyHandlers = {
 	get: shallowReadonlyGet,
 	set: (target, key, value) => {
-		console.log("set on key is fail");
+		console.log(`set on key ${key} is failed!`);
 	}
 }
 

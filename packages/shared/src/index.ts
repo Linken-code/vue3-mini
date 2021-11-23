@@ -37,18 +37,18 @@ export const camelize = (string) => {
 }
 
 export const capitalize = (str) => {
-	return str[0].toUpperCase() + str.slice(1).
+	return str[0].toUpperCase() + str.slice(1)
 }
 
-export const queuePostFlushCb = (cb) => { //  cb 可能是一个数组
-	queueCb(cb, pendingPostFlushCbs)
-}
-const queueCb = (cb, pendingQueue) => {
-	if (!isArray(cb)) {
-		pendingQueue.push(cb);
-	} else {
-		pendingQueue.push(...cb);
-	}
-	queueFlush();
-}
+// export const queuePostFlushCb = (cb) => { //  cb 可能是一个数组
+// 	queueCb(cb, pendingPostFlushCbs)
+// }
+// const queueCb = (cb, pendingQueue) => {
+// 	if (!isArray(cb)) {
+// 		pendingQueue.push(cb);
+// 	} else {
+// 		pendingQueue.push(...cb);
+// 	}
+// 	queueFlush();
+// }
 export * from './shapeFlags'

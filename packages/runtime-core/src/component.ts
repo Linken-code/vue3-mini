@@ -6,8 +6,8 @@ const setupStateComponent = (instance) => {
 	// 1. 代理  传递给 render 函数的参数
 	instance.proxy = new Proxy(instance.ctx, componentPublicInstance as any)
 	// 2. 获取组件的类型，拿到组件的 setup 方法
-	let Component = instance.type
-	let { setup } = Component;
+	const Component = instance.type
+	const { setup } = Component;
 	//判断组件是否有setup
 	if (setup) {  // 有 setup 再创建执行上下文的实例
 		currentInstance = instance
@@ -58,8 +58,9 @@ const finishComponentSetup = (instance) => {
 				const el = document.querySelector(template)
 				template = el ? el.innerHTML : ""
 			}
-			const code = baseCompile(template)
-			Component.render = new Function('ctx', code)
+			//const code = baseCompile(template)
+			Component.render = baseCompile(template)
+			//Component.render = new Function('ctx', code)
 		}
 		instance.render = Component.render;
 	}
@@ -78,13 +79,24 @@ export const createComponentInstance = (vnode) => {
 		attrs: {},      // 元素本身的属性
 		slots: {},      // 组件的插槽
 		setupState: {}, // 组件setup的返回值
-		isMounted: false // 组件是否被挂载？
+		isMounted: false, // 组件是否被挂载？
+		expose: null,//
+		emit: null, //
+		update: null, //
+		proxy: null,  //	
+		components: null,  //
+		//生命周期
+		bc: null,  //
+		m: null,  //
+		bu: null,  //
+		u: null,  //
+		um: null,  //
 	}
 	instance.ctx = { _: instance };
 	return instance
 }
 
-//解析数据到组件实例,拓展instance
+//初始化组件，解析数据到组件实例,拓展instance
 export const setupComponent = (instance) => {
 	//设置值
 	const { props, children, shapeFlag } = instance.vnode
@@ -93,8 +105,8 @@ export const setupComponent = (instance) => {
 	instance.props = props;         // 1.初始化属性 initProps()
 	instance.children = children;   // 2.初始化插槽 initSlot()
 	// 需要先看一下当前组件是不是有状态的组件，函数组件
-	let stateful = shapeFlag & ShapeFlags.STATEFUL_COMPONENT
-	if (stateful) {  // 表示现在是一个带状态的组件
+	let isStateful = shapeFlag & ShapeFlags.STATEFUL_COMPONENT
+	if (isStateful) {  // 表示现在是一个带状态的组件
 		// 调用 当前实例的setup 方法，用setup的返回值填充 setupState 和对应的 render 方法
 		setupStateComponent(instance)
 	}

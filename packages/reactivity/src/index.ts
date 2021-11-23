@@ -1,4 +1,4 @@
-//入口文件
+//导出方法
 export {
 	reactive,
 	shallowReactive,

@@ -1,6 +1,7 @@
 import { createVNode } from "./vnode"
 import { camelize, capitalize } from "@vue/shared/src"
 let components
+let uid = 0
 export const createAppAPI = (render) => {
 	return function createApp(rootComponent, rootProps = null) {
 		components = rootComponent.components || {}
@@ -8,7 +9,7 @@ export const createAppAPI = (render) => {
 		const context = createAppContext()
 		let isMounted = false
 		const app = {
-			//_uid: uid++,
+			_uid: uid++,
 			_props: rootProps, // 属性
 			_component: rootComponent, // 组件
 			_container: null,
@@ -31,7 +32,7 @@ export const createAppAPI = (render) => {
 					const vnode = createVNode(rootComponent, rootProps)
 					// 缓存 context,存储应用上下文,首次挂载时设置
 					vnode.appContext = context
-
+					//渲染vnode
 					render(vnode, rootContainer)
 					// 标记应用已挂载
 					isMounted = true

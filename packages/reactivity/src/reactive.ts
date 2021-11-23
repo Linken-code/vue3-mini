@@ -6,10 +6,9 @@ import {
 	shallowReadonlyHandlers
 } from './baseHandlers'
 
-const reactiveMap = new WeakMap()//key 必须是对象，自动垃圾回收
+const reactiveMap = new WeakMap()//key 必须是对象，自动垃圾回收，不会造成内存泄漏
 const readonlyMap = new WeakMap()
 //实现核心代理
-
 const createReactObj = (target, isReadonly, baseHandlers) => {
 	//判断target是否为对象
 	if (!isObject(target)) {
@@ -26,7 +25,7 @@ const createReactObj = (target, isReadonly, baseHandlers) => {
 
 	//进行代理
 	const proxy = new Proxy(target, baseHandlers)
-	proxyMap.set(target, proxy)//存放代理对象
+	proxyMap.set(target, proxy)//缓存代理对象
 	//返回代理对象
 	return proxy
 }
