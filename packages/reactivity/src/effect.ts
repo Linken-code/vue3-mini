@@ -1,5 +1,5 @@
 //定义effect 收集依赖，更新视图
-import { isArray, isInteger, IsDEV, extend } from '@vue/shared/src'
+import { isArray, isInteger, IsDEV, isMap, extend } from '@vue/shared/src'
 import { TriggerTypes } from './operations'
 import {
 	createDep,
@@ -47,6 +47,8 @@ let effectTrackDepth = 0
 // 位标记
 export let trackOpBit = 1
 let shouldTrack = true
+//创建结构表,依赖统一管理 { target => key => dep }
+let targetMap = new WeakMap()
 
 export function pauseTracking() {
 	trackStack.push(shouldTrack)
@@ -104,9 +106,9 @@ export class ReactiveEffect<T = any>{
 		if (!effectStack.includes(this)) {
 			try {
 				// activeEffect 表示当前依赖收集系统正在处理的 effect
-				// 先把当前 effect 设置为全局全局激活的 effect，在 getter 中会收集 activeEffect 持有的 effect
+				// 先把当前 effect 设置为全局激活的 effect，在 getter 中会收集 activeEffect 持有的 effect
 				// 然后入栈
-				effectStack.push(activeEffect = this)
+				effectStack.push((activeEffect = this))
 				// 恢复依赖收集，因为在setup 函数自行期间，会暂停依赖收集
 				enableTracking()
 				// 记录递归深度位数
@@ -161,8 +163,6 @@ export class ReactiveEffect<T = any>{
 // }
 // 给每个 target 创建一个 map，每个 key 对应着一个 dep
 // 用 dep 来收集依赖函数，监听 key 值变化，触发 dep 中的依赖函数
-
-let targetMap = new WeakMap()//创建结构表
 export const Track = (target, type, key) => {
 	// 如果当前没有激活 effect，就不用收集
 	if (!isTracking()) {
@@ -180,7 +180,7 @@ export const Track = (target, type, key) => {
 		//3.2
 		depsMap.set(key, (dep = createDep()))
 	}
-	//3.0有没有effect
+	//3.0 有没有effect
 	// if (!dep.has(activeEffect)) {//没有则收集effect
 	// 	dep.add(activeEffect)
 	// }
@@ -190,7 +190,6 @@ export const Track = (target, type, key) => {
 		? { effect: activeEffect, target, type, key }
 		: undefined
 	trackEffects(dep, eventInfo)
-
 }
 
 export const trackEffects = (dep, debuggerEventExtraInfo?) => {
@@ -226,14 +225,7 @@ export const trackEffects = (dep, debuggerEventExtraInfo?) => {
 		}
 	}
 }
-let effectSet = new Set()//set可以去重
-const add = (effectAdd) => {
-	if (effectAdd) {
-		effectAdd.forEach((item) => {
-			effectSet.add(item)
-		})
-	}
-}
+
 //触发更新
 export const Trigger = (
 	target: object,
@@ -247,7 +239,7 @@ export const Trigger = (
 	if (!depsMap) {
 		return
 	}
-	let deps = []
+	let deps: (Dep | undefined)[] = []
 	// 触发trigger 的时候传进来的类型是清除类型
 	if (type === TriggerTypes.CLEAR) {
 		// 往队列中添加关联的所有依赖，准备清除
@@ -259,60 +251,77 @@ export const Trigger = (
 			// 也就是索引号 >= 数组最新的length的元素们对应的 effects，要将它们添加进队列准备清除
 			if (key === "length" || key >= newValue) {
 				deps.push(dep)
-			} else {
-				//可能是对象
-				// 如果 key 不是 undefined，就添加对应依赖到队列，比如新增、修改、删除
-				if (key != undefined) {//修改
-					deps.push(depsMap.get(key))
-				}
-				switch (type) {
-					case TriggerTypes.ADD:// 新增
-						if (isArray(target) && isInteger(key)) {
-							add(depsMap.get("length"))
-						}
-						break;
-					case TriggerTypes.DELETE: // 删除
-
-						break
-					case TriggerTypes.SET: // 修改
-
-						break
-				}
-				//3.2
-				// 到这里就拿到了 targetMap[target][key]，并存到 deps 里
-				// 接着是要将对应的 effect 取出，调用 triggerEffects 执行		
-				// 判断开发环境，传入eventInfo
-				const eventInfo = IsDEV
-					? { target, type, key, newValue, oldValue }
-					: undefined
-
-				if (deps.length === 1) {
-					if (deps[0]) {
-						triggerEffects(deps[0])
-					}
-				} else {
-					const effects: ReactiveEffect[] = []
-					for (const dep of deps) {
-						if (dep) {
-							effects.push(...dep)
-						}
-					}
-					if (IsDEV) {
-						triggerEffects(createDep(effects), eventInfo)
-					} else {
-						triggerEffects(createDep(effects))
-					}
-					//3.0执行
-					// effectSet.forEach((effectFn: any) => {
-					// 	if (effectFn.options.sch) {
-					// 		effectFn.options.sch(effectFn) //computed的dirty=true
-					// 	} else {
-					// 		effectFn()
-					// 	}
-					// })
-				}
 			}
 		})
+	} else {
+		//可能是对象
+		// 如果 key 不是 undefined，就添加对应依赖到队列，比如新增、修改、删除
+		if (key != undefined) {//修改
+			deps.push(depsMap.get(key))
+		}
+		switch (type) {
+			case TriggerTypes.ADD:// 新增
+				if (!isArray(target)) {
+					deps.push(depsMap.get("iterate"))
+					if (isMap(target)) {
+						deps.push(depsMap.get("Map key iterate"))
+					}
+				} else if (isInteger(key)) {
+					// new index added to array -> length changes
+					deps.push(depsMap.get('length'))
+				}
+				break
+			case TriggerTypes.DELETE:// 删除
+				if (!isArray(target)) {
+					deps.push(depsMap.get("iterate"))
+					if (isMap(target)) {
+						deps.push(depsMap.get("Map key iterate"))
+					}
+				}
+				break
+			case TriggerTypes.SET:// 修改
+				if (isMap(target)) {
+					deps.push(depsMap.get("iterate"))
+				}
+				break
+		}
+	}
+	//3.2
+	// 到这里就拿到了 targetMap[target][key]，并存到 deps 里
+	// 接着是要将对应的 effect 取出，调用 triggerEffects 执行		
+	// 判断开发环境，传入eventInfo
+	const eventInfo = IsDEV
+		? { target, type, key, newValue, oldValue }
+		: undefined
+
+	if (deps.length === 1) {
+		if (deps[0]) {
+			if (IsDEV) {
+				triggerEffects(deps[0], eventInfo)
+			} else {
+				triggerEffects(deps[0])
+			}
+		}
+	} else {
+		const effects: ReactiveEffect[] = []
+		for (const dep of deps) {
+			if (dep) {
+				effects.push(...dep)
+			}
+		}
+		if (IsDEV) {
+			triggerEffects(createDep(effects), eventInfo)
+		} else {
+			triggerEffects(createDep(effects))
+		}
+		//3.0执行
+		// effectSet.forEach((effectFn: any) => {
+		// 	if (effectFn.options.sch) {
+		// 		effectFn.options.sch(effectFn) //computed的dirty=true
+		// 	} else {
+		// 		effectFn()
+		// 	}
+		// })
 	}
 }
 
@@ -343,6 +352,9 @@ export const triggerEffects = (dep, debuggerEventExtraInfo?) => {
 export const effect = (fn, options: any = {}) => {
 	//3.0 const effect = createReactEffect(fn, options);
 	//3.2 创建 effect
+	if (fn.effect) {
+		fn = fn.effect.fn
+	}
 	const _effect = new ReactiveEffect(fn)
 	if (options) {
 		extend(_effect, options)

@@ -1,10 +1,15 @@
 //公共方法
-export const IsDEV = process.env.NODE_ENV !== 'production'
-
+//export const IsDEV = process.env.NODE_ENV !== 'production';
+export const IsDEV = false
 export const isObject = (val: unknown): val is Record<any, any> =>
 	val !== null && typeof val === 'object'
 
 export const extend = Object.assign
+export const objectToString = Object.prototype.toString
+export const toTypeString = (value: unknown): string =>
+	objectToString.call(value)
+export const isMap = (val: unknown): val is Map<any, any> =>
+	toTypeString(val) === '[object Map]'
 export const isString = (val: unknown): val is string => typeof val === 'string'
 export const isInteger = (key) => parseInt(key) + '' === key
 export const isArray = Array.isArray

@@ -24,7 +24,7 @@ class ComputedRefImpl {
 			this._value = this.effect()
 			this._dirty = false
 			// 调用 track 收集依赖
-			Track(self, TrackOpType.GET, 'value')
+			Track(this, TrackOpType.GET, 'value')
 		}
 		return this._value;
 	}
@@ -34,7 +34,7 @@ class ComputedRefImpl {
 
 }
 
-export const computed = (target: any,) => {
+export const computed = (target: any) => {
 	//target为1.函数2.对象
 	let getter
 	let setter
@@ -44,7 +44,6 @@ export const computed = (target: any,) => {
 
 		setter = () => {
 			console.warn("computed value must be readonly");
-
 		}
 	} else {
 		getter = target.get;

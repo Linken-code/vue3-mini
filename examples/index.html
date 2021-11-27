@@ -16,7 +16,13 @@
             shallowReactive,
             readonly,
             shallowReadonly,
-            ref
+
+            effect,
+            computed,
+
+            ref,
+            toRef,
+            toRefs,
         } = VueReactivity
 
         let state = reactive({
@@ -25,8 +31,20 @@
         })
         let num = ref(30)
 
-        console.log(state);
-        console.log(num);
+        effect(() => {
+            console.log("age:", state.age);
+            //console.log("num:", num.value);
+        })
+
+        const c = computed(() => {
+            return num.value * 2
+        })
+        setTimeout(() => {
+            //console.log(state.age);
+            //state.age = 22
+            num.value = 50
+            console.log("computed", c);
+        }, 3000)
     </script>
 </body>
 
