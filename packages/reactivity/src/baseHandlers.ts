@@ -7,18 +7,18 @@ const createGetter = (isReadonly = false, shallow = false) => {
 	return (target, key, receiver) => {
 		//反射
 		const res = Reflect.get(target, key, receiver)
-		//只读
-		if (!isReadonly) {//不是只读
-			//收集依赖 effect
+		//不是只读类型的 target 就收集依赖。因为只读类型不会变化，无法触发 setter，也就会触发更新
+		if (!isReadonly) {
+			// 收集依赖，存储到对应的全局仓库中
 			Track(target, TrackOpType.GET, key)
 		}
 
-		//浅层
-		if (shallow) {//是浅层
+		//浅层,不做递归转化，就是说对象有属性值还是对象的话不递归调用 reactive()
+		if (shallow) {
 			return res
 		}
 
-		//如果res是对象，则递归 称为懒代理
+		//由于 proxy 只能代理一层,如果子元素是对象,需要递归继续代理,称为懒代理
 		if (isObject(res)) {
 			return isReadonly ? readonly(res) : reactive(res)
 		}
@@ -40,14 +40,15 @@ const createSetter = (shallow = false) => {
 		let hasKey = isArray(target) && isInteger(key) ?
 			Number(key) < target.length
 			: hasOwn(target, key)
-		//获取最新的值
+		//赋值，相当于 target[key] = value
 		const result = Reflect.set(target, key, value, receiver)
-		if (!hasKey) {//没有key
+		if (!hasKey) { // 如果target没有 key，表示新增
 			//新增
 			Trigger(target, TriggerTypes.ADD, key, value)
 		} else {//修改 
 			//判断新值和原来是否相同
 			if (hasChange(value, oldValue)) {
+				// 如果新旧值不相等
 				Trigger(target, TriggerTypes.SET, key, value, oldValue)
 			}
 		}

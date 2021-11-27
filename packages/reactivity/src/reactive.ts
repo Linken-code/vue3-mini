@@ -10,7 +10,7 @@ const reactiveMap = new WeakMap()//key 必须是对象，自动垃圾回收，�
 const readonlyMap = new WeakMap()
 //实现核心代理
 const createReactObj = (target, isReadonly, baseHandlers) => {
-	//判断target是否为对象
+	//判断target是否为对象, typeof 不是 object 类型的，直接返回
 	if (!isObject(target)) {
 		return target
 	}
@@ -19,7 +19,7 @@ const createReactObj = (target, isReadonly, baseHandlers) => {
 	const proxyMap = isReadonly ? readonlyMap : reactiveMap
 	//判断缓存中是否有这个对象
 	const exisitProxy = proxyMap.get(target)//已经代理过了
-	if (exisitProxy) {
+	if (exisitProxy) {//如果已经存在 map 中了，就直接返回
 		return exisitProxy
 	}
 
@@ -46,3 +46,7 @@ export const shallowReadonly = (target) => {
 	return createReactObj(target, true, shallowReadonlyHandlers);
 }
 
+export const toRaw = (observed) => {
+	const raw = observed
+	return raw
+}

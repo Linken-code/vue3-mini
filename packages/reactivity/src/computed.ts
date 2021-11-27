@@ -9,7 +9,7 @@ class ComputedRefImpl {
 
 	constructor(getter, public setter) {
 		this.effect = effect(getter, {
-			lazy: true, sch: () => {//修改数据执行sch
+			lazy: true, scheduler: () => {//修改数据执行sch
 				if (!this._dirty) {
 					this._dirty = true
 					//触发更新
