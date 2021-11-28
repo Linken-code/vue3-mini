@@ -8,6 +8,7 @@ class ComputedRefImpl {
 	public effect;
 
 	constructor(getter, public setter) {
+		this._value = undefined;
 		this.effect = effect(getter, {
 			lazy: true, scheduler: () => {//修改数据执行sch
 				if (!this._dirty) {

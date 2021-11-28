@@ -1,3 +1,12 @@
+<!--
+ * @Author: Linken
+ * @Date: 2021-11-23 20:59:37
+ * @LastEditTime: 2021-11-28 21:11:14
+ * @LastEditors: Linken
+ * @Description: 学习vue3源码
+ * @FilePath: \vue3-mini\examples\index.html
+ * 仿写vue3源码，实现vue3-mini
+-->
 <!DOCTYPE html>
 <html lang="en">
 
@@ -6,7 +15,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>vue3-mini</title>
-    <script src="./dist/reactivity.global.js"></script>
+    <script src="./dist/runtime-dom.global.js"></script>
 </head>
 
 <body>
@@ -23,7 +32,7 @@
             ref,
             toRef,
             toRefs,
-        } = VueReactivity
+        } = VueRuntimeDom
 
         let state = reactive({
             age: 20,
@@ -32,8 +41,8 @@
         let num = ref(30)
 
         effect(() => {
-            console.log("age:", state.age);
-            //console.log("num:", num.value);
+            //console.log("age:", state.age);
+            console.log("num:", num.value);
         })
 
         const c = computed(() => {
@@ -41,9 +50,9 @@
         })
         setTimeout(() => {
             //console.log(state.age);
-            //state.age = 22
+            // state.age = 22
             num.value = 50
-            console.log("computed", c);
+            console.log("computed", c.value);
         }, 3000)
     </script>
 </body>

@@ -1,3 +1,4 @@
+
 //公共方法
 //export const IsDEV = process.env.NODE_ENV !== 'production';
 export const IsDEV = false
@@ -47,15 +48,5 @@ export const capitalize = (str) => {
 	return str[0].toUpperCase() + str.slice(1)
 }
 
-// export const queuePostFlushCb = (cb) => { //  cb 可能是一个数组
-// 	queueCb(cb, pendingPostFlushCbs)
-// }
-// const queueCb = (cb, pendingQueue) => {
-// 	if (!isArray(cb)) {
-// 		pendingQueue.push(cb);
-// 	} else {
-// 		pendingQueue.push(...cb);
-// 	}
-// 	queueFlush();
-// }
 export * from './shapeFlags'
+export * from './patchFlags'

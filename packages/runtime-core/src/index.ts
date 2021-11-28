@@ -1,9 +1,42 @@
-import { createRender } from './render'
-import { h } from './h'
-export { renderList } from './helpers/renderList'
+export {
+	// core
+	computed,
+	reactive,
+	ref,
+	readonly,
+	// utilities
+	toRef,
+	toRefs,
+	// advanced
+	shallowReactive,
+	shallowReadonly,
+	// effect
+	effect,
+	// effect scope
+} from '@vue/reactivity'
+export { watch, watchEffect } from './apiWatch'
+// lifeCycle Renderer API ---------------------------------------------------------
+export {
+	onBeforeMount,
+	onMounted,
+	onBeforeUpdate,
+	onUpdated,
+} from './lifeCycle'
 export { queueJob, nextTick } from './scheduler'
-export * from '@vue/reactivity'
-export * from '@vue/runtime-core'
-// `render` 是底层 API
-// `createApp` 会产生一个 app 实例，该实例拥有全局的可配置上下文
-export { createRender, h }
+// Advanced API ----------------------------------------------------------------
+export { getCurrentInstance } from './component'
+// For raw render function users
+export { h } from './h'
+// Advanced render function utilities
+export { createVNode, isVNode } from './vnode'
+// VNode types
+export { Fragment, Text, } from './vnode'
+// Custom Renderer API ---------------------------------------------------------
+export { createRenderer } from './render'
+// helpers  API ---------------------------------------------------------
+export { renderList } from './helpers/renderList'
+export { resolveComponent } from './helpers/resolveAssets'
+export {
+	camelize,
+	capitalize,
+} from '@vue/shared'

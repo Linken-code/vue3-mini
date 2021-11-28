@@ -1,3 +1,4 @@
+
 //操作节点
 export const nodeOps = {
 	insertElement: (child, parent, anchor = null) => { // 增加
@@ -23,5 +24,5 @@ export const nodeOps = {
 	},
 	parentNode: node => node.parentNode, // 获取父节点
 	nextSibling: node => node.nextSibling, // 获取下个兄弟
-	qureyElement: selector => document.querySelector(selector)
+	queryElement: selector => document.querySelector(selector)
 }

@@ -1,3 +1,4 @@
+
 //导出方法
 export {
 	reactive,
@@ -7,7 +8,14 @@ export {
 } from './reactive';
 
 export {
-	effect
+	effect,
+	stop,
+	Trigger,
+	Track,
+	enableTracking,
+	pauseTracking,
+	resetTracking,
+	ReactiveEffect,
 } from './effect';
 
 export {
@@ -17,3 +25,4 @@ export {
 export {
 	computed
 } from './computed';
+export { TrackOpType, TriggerTypes } from './operations'

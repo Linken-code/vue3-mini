@@ -26,7 +26,6 @@ const doWatch = (target, callBack, { immediate = false }) => {
 	oldValue = run()
 }
 
-
 export const watch = (target, callBack, options) => {
 	return doWatch(target, callBack, options)
 }

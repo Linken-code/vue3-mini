@@ -1,3 +1,12 @@
+/*
+ * @Author: Linken
+ * @Date: 2021-10-24 14:26:33
+ * @LastEditTime: 2021-11-28 21:10:15
+ * @LastEditors: Linken
+ * @Description: 学习vue3源码
+ * @FilePath: \vue3-mini\scripts\dev.js
+ * 仿写vue3源码，实现vue3-mini
+ */
 // monerepo打包
 
 //获取文件
@@ -13,7 +22,7 @@ const build = async(target) => {
 
 
 //打包单个模块
-build("reactivity")
+build("runtime-dom")
     .then(() => { //promise
         console.log("打包成功");
     })

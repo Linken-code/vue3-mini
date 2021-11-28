@@ -1,10 +1,29 @@
+
 import { createVNode } from "./vnode"
-import { camelize, capitalize } from "@vue/shared/src"
-let components
+
+
+export const createAppContext = () => {
+	return {
+		app: null as any,
+		config: {
+			isNativeTag: false,
+			performance: false,
+			globalProperties: {},
+			optionMergeStrategies: {},
+			isCustomElement: false,
+			errorHandler: undefined,
+			warnHandler: undefined
+		},
+		mixins: [],
+		components: {},
+		directives: {},
+		provides: Object.create(null)
+	}
+}
+
 let uid = 0
 export const createAppAPI = (render) => {
 	return function createApp(rootComponent, rootProps = null) {
-		components = rootComponent.components || {}
 		// 创建vue应用上下文，上下文主要包括 应用本身，设置项，组件、指令注册仓库、混入
 		const context = createAppContext()
 		let isMounted = false
@@ -14,6 +33,11 @@ export const createAppAPI = (render) => {
 			_component: rootComponent, // 组件
 			_container: null,
 			_context: context,
+			_instance: null,
+
+			get config() {
+				return context.config
+			},
 			// 全局组件注册，入参为组件名、组件options
 			component(name: string, component): any {
 				if (!component) {
@@ -51,31 +75,8 @@ export const createAppAPI = (render) => {
 				}
 			},
 		}
+		context.app = app
 		return app;
 	}
 }
 
-export const resolveComponent = (name: string) => {
-	return (components &&
-		(components[name] ||
-			camelize(name) ||
-			capitalize(camelize(name))))
-}
-export const createAppContext = () => {
-	return {
-		app: null as any,
-		config: {
-			isNativeTag: NO,
-			performance: false,
-			globalProperties: {},
-			optionMergeStrategies: {},
-			isCustomElement: NO,
-			errorHandler: undefined,
-			warnHandler: undefined
-		},
-		mixins: [],
-		components: {},
-		directives: {},
-		provides: Object.create(null)
-	}
-}

@@ -7,7 +7,7 @@ export const generate = (ast) => {
 	}
 }
 
-const traverseNode = (node, parent) => {
+const traverseNode = (node, parent?) => {
 	switch (node.type) {
 		case NodeTypes.ROOT:
 			if (node.children.length === 1) {

@@ -69,6 +69,10 @@ export const isTracking = () => {
 	return shouldTrack && activeEffect !== undefined
 }
 
+export const stop = (runner) => {
+	runner.effect.stop()
+}
+
 // 重置依赖
 const cleanupEffect = (effect) => {
 	const { deps } = effect
