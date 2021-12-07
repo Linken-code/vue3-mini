@@ -1,7 +1,7 @@
 <!--
  * @Author: Linken
  * @Date: 2021-11-23 20:59:37
- * @LastEditTime: 2021-11-28 21:44:47
+ * @LastEditTime: 2021-11-29 22:28:37
  * @LastEditors: Linken
  * @Description: 学习vue3源码
  * @FilePath: \vue3-mini\examples\test2.html
@@ -9,66 +9,63 @@
 -->
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>vue3-mini</title>
     <script src="./dist/runtime-dom.global.js"></script>
-</head>
+  </head>
 
-<body>
-    <div id="app">
+  <body>
+    <div id="app"></div>
+  </body>
 
-    </div>
-</body>
-
-<script>
-    let {
-        createApp,
-        render,
-        h,
-        Text,
-        Fragment
-    } = VueRuntimeDom
+  <script>
+    let { createApp, render, h, Text, Fragment } = VueRuntimeDom
 
     const vnode = h(
-        'div', {
-            class: 'a b',
-            style: {
-                border: '1px solid',
-                fontSize: '14px',
+      'div',
+      {
+        class: 'a b',
+        style: {
+          border: '1px solid',
+          fontSize: '14px'
+        },
+        onClick: () => console.log('click'),
+        id: 'foo',
+        checked: '',
+        custom: false
+      },
+      [
+        h('ul', null, [
+          h(
+            'li',
+            {
+              style: {
+                color: 'red'
+              }
             },
-            onClick: () => console.log("click"),
-            id: 'foo',
-            checked: '',
-            custom: false,
-        }, [
-            h(
-                "ul",
-                null, [
-                    h("li", {
-                        style: {
-                            color: 'red'
-                        }
-                    }, 1),
-                    h("li", null, 2),
-                    h("li", {
-                        style: {
-                            color: 'blue'
-                        }
-                    }, 3),
-                    h(Fragment, null, [h("li", null, 4), h("li")]),
-                    h('li', null, [h(Text, null, "hello world")]),
-                ]
-            )
-        ]
+            1
+          ),
+          h('li', null, 2),
+          h(
+            'li',
+            {
+              style: {
+                color: 'blue'
+              }
+            },
+            3
+          ),
+          h(Fragment, null, [h('li', null, 4), h('li')]),
+          h('li', null, [h(Text, null, 'hello world')])
+        ])
+      ]
     )
 
-    let app = document.getElementById("app")
+    let app = document.getElementById('app')
     render(vnode, app)
-    console.log(app);
-</script>
-
+    console.log(app)
+  </script>
 </html>

@@ -11,9 +11,9 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>vue3-mini</title>
     <script src="./dist/runtime-dom.global.js"></script>
 </head>
@@ -31,18 +31,18 @@
 
             ref,
             toRef,
-            toRefs,
+            toRefs
         } = VueRuntimeDom
 
         let state = reactive({
             age: 20,
-            name: "张三"
+            name: '张三'
         })
         let num = ref(30)
 
         effect(() => {
             //console.log("age:", state.age);
-            console.log("num:", num.value);
+            console.log('num:', num.value)
         })
 
         const c = computed(() => {
@@ -52,7 +52,7 @@
             //console.log(state.age);
             // state.age = 22
             num.value = 50
-            console.log("computed", c.value);
+            console.log('computed', c.value)
         }, 3000)
     </script>
 </body>
