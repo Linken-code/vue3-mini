@@ -1,14 +1,15 @@
 {
-    "name": "@vue/compiler-core",
-    "version": "1.0.0",
-    "author": "Linken",
-    "main": "index.js",
-    "license": "MIT",
-    "buildOptions": {
-        "name": "VueCompilerCore",
-        "formats": [
-            "esm-bundler",
-            "cjs"
-        ]
-    }
+  "name": "@vue/compiler-core",
+  "version": "1.0.0",
+  "author": "Linken",
+  "main": "index.js",
+  "license": "MIT",
+  "buildOptions": {
+    "name": "VueCompilerCore",
+    "formats": [
+      "esm-bundler",
+      "cjs",
+      "global"
+    ]
+  }
 }

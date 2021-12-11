@@ -1,0 +1,28 @@
+<!--
+ * @Author: Linken
+ * @Date: 2021-12-11 15:24:16
+ * @LastEditTime: 2021-12-11 15:29:47
+ * @LastEditors: Linken
+ * @Description: 学习vue3源码
+ * @FilePath: \vue3-mini\examples\test3.html
+ * 仿写vue3源码，实现vue3-mini
+-->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>vue3-mini</title>
+    <script src="./dist/compiler-core.global.js"></script>
+  </head>
+
+  <body>
+    <div id="app"></div>
+  </body>
+
+  <script>
+    let { baseParse } = VueCompilerCore
+    console.log(baseParse(`<div id="div" class="foo"  v-if="ok" >hello {{name}}</div>`))
+  </script>
+</html>

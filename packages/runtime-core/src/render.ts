@@ -1,5 +1,5 @@
 import { Text, Fragment, normalizeVNode, createVNode, isSameVnode } from './vnode'
-import { createComponentInstance, setupComponent } from './component'
+import { createComponentInstance, setupComponent, initProps } from './component'
 import { ShapeFlags, PatchFlags, invokeArrayFns } from '@vue/shared/src'
 import { queueJob, queuePostFlushCb } from './scheduler'
 import { pauseTracking, resetTracking, ReactiveEffect } from '@vue/reactivity'
@@ -38,14 +38,14 @@ const baseCreateRenderer = renderOptionsDom => {
   } = renderOptionsDom
 
   //操作元素
-  const patch = (n1, n2, container, anchor = null) => {
+  const patch = (n1, n2, container, anchor = null, parentComponent?) => {
     if (n1 === n2) {
       return
     }
     //判断是否为相同元素
     if (n1 && !isSameVnode(n1, n2)) {
       anchor = (n1.anchor || n1.el).nextSibling
-      unmount(n1) //删除元素
+      unmount(n1, parentComponent) //删除元素
       n1 = null
     }
     //区别不同类型
@@ -118,8 +118,31 @@ const baseCreateRenderer = renderOptionsDom => {
       mountComponent(n2, container)
     } else {
       //组件更新
-      patchElement(n1, n2)
+      updateComponent(n1, n2)
+      // patchElement(n1, n2)
     }
+  }
+
+  //组件渲染流程
+  const mountComponent = (initialVNode, container, anchor?, parentComponent?) => {
+    // 组件初始化
+    // 1. 先有实例,创建组件实例对象render(proxy)
+    const instance = (initialVNode.component = createComponentInstance(initialVNode, parentComponent))
+    // 2. 需要的数据解析到实例上
+    setupComponent(instance)
+    // 3. 创建一个effect 让render执行
+    setupRenderEffect(instance, initialVNode, container, anchor)
+  }
+
+  const updateComponent = (n1, n2) => {
+    const instance = (n2.component = n1.component)!
+    instance.next = n2
+    instance.update()
+    // if (shouldUpdateComponent(n1, n2)) {
+    //   // normal update
+    //   instance.next = n2
+    //   instance.update()
+    // }
   }
 
   //创建真实节点
@@ -233,7 +256,7 @@ const baseCreateRenderer = renderOptionsDom => {
     }
   }
 
-  const patchUnkeyedChildren = (c1, c2, container, anchor = null) => {
+  const patchUnkeyedChildren = (c1, c2, container, anchor = null, parentComponent?) => {
     c1 = c1
     c2 = c2
     const oldLength = c1.length
@@ -246,7 +269,7 @@ const baseCreateRenderer = renderOptionsDom => {
     }
     if (oldLength > newLength) {
       // remove old
-      unmountChildren(c1)
+      unmountChildren(c1, parentComponent)
     } else {
       // mount new
       mountChildren(c2, container, anchor)
@@ -374,20 +397,23 @@ const baseCreateRenderer = renderOptionsDom => {
     }
   }
 
-  const unmount = vnode => {
+  const unmount = (vnode, parentComponent?) => {
     const { type, props, children, shapeFlag, patchFlag } = vnode
     if (shapeFlag & ShapeFlags.COMPONENT) {
       unmountComponent(vnode.component!)
+    } else if (type === Fragment && shapeFlag & ShapeFlags.COMPONENT) {
+      unmountFragment(vnode)
     } else {
-      if (type === Fragment && shapeFlag & ShapeFlags.COMPONENT) {
-        unmountFragment(vnode)
-      }
+      //removeElement(children)
+      unmountChildren(children, parentComponent)
     }
-    removeElement(vnode.el)
   }
 
   //卸载组件
-  const unmountComponent = vnode => {}
+  const unmountComponent = instance => {
+    const { bum, scope, update, subTree, um } = instance
+    unmount(subTree, instance)
+  }
 
   //卸载Fragment
   const unmountFragment = vnode => {
@@ -402,9 +428,9 @@ const baseCreateRenderer = renderOptionsDom => {
   }
 
   //卸载节点
-  const unmountChildren = children => {
+  const unmountChildren = (children, parentComponent?) => {
     children.forEach(child => {
-      unmount(child)
+      unmount(child, parentComponent)
     })
   }
 
@@ -416,17 +442,6 @@ const baseCreateRenderer = renderOptionsDom => {
       //递归处理
       patch(null, child, container, anchor)
     }
-  }
-
-  //组件渲染流程
-  const mountComponent = (initialVNode, container) => {
-    // 组件初始化
-    // 1. 先有实例,创建组件实例对象render(proxy)
-    const instance = (initialVNode.component = createComponentInstance(initialVNode))
-    // 2. 需要的数据解析到实例上
-    setupComponent(instance)
-    // 3. 创建一个effect 让render执行
-    setupRenderEffect(instance, initialVNode, container)
   }
 
   //给组件增加渲染effect，保证组件中数据变化可以重新进行组件的渲染
@@ -443,9 +458,8 @@ const baseCreateRenderer = renderOptionsDom => {
           invokeArrayFns(bm)
         }
         effect.allowRecurse = true
-        const proxyToUse = instance.proxy // 实例中的代理属性
         //执行render，返回dom树
-        const subTree = (instance.subTree = instance.render.call(proxyToUse, proxyToUse))
+        const subTree = (instance.subTree = renderComponentRoot(instance))
         //渲染子树,创建元素
         patch(null, subTree, container, anchor) // 渲染子树
         initialVNode.el = subTree.el // 组件的el和子树的el是同一个
@@ -457,12 +471,22 @@ const baseCreateRenderer = renderOptionsDom => {
         }
       } else {
         //更新逻辑
-        const { bu, u } = instance
+        let { next, bu, u, parent, vnode } = instance
+        let originNext = next
+        effect.allowRecurse = false
+        if (next) {
+          //被动更新
+          next.el = vnode.el
+          updateComponentPreRender(instance, next)
+        } else {
+          next = vnode
+        }
+
         if (bu) {
           // beforeUpdate
           invokeArrayFns(bu)
         }
-
+        effect.allowRecurse = true
         let proxy = instance.proxy
         //旧节点
         const prevTree = instance.subTree
@@ -471,7 +495,7 @@ const baseCreateRenderer = renderOptionsDom => {
         //替换节点
         instance.subTree = nextTree
         //对比新旧节点
-        patch(prevTree, nextTree, container)
+        patch(prevTree, nextTree, container, anchor)
         if (u) {
           // updated
           //invokeArrayFns(u)
@@ -493,6 +517,53 @@ const baseCreateRenderer = renderOptionsDom => {
     effect.allowRecurse = update.allowRecurse = true
 
     update()
+  }
+
+  const updateComponentPreRender = (instance, nextVNode) => {
+    nextVNode.component = instance
+    const prevProps = instance.vnode.props
+    instance.vnode = nextVNode
+    instance.next = null
+
+    const { shapeFlag } = instance.vnode
+    const isStateful = shapeFlag & ShapeFlags.STATEFUL_COMPONENT
+    initProps(instance, nextVNode, isStateful)
+    // updateProps(instance, nextVNode.props, prevProps)
+    // updateSlots(instance, nextVNode.children)
+  }
+
+  const renderComponentRoot = instance => {
+    const {
+      type: Component,
+      vnode,
+      proxy,
+      withProxy,
+      props,
+      slots,
+      attrs,
+      emit,
+      render,
+      renderCache,
+      data,
+      setupState,
+      ctx
+    } = instance
+    let result
+    if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+      // withProxy is a proxy with a different `has` trap only for
+      // runtime-compiled render functions using `with` block.
+      const proxyToUse = withProxy || proxy
+      result = normalizeVNode(render!.call(proxyToUse, proxyToUse!, renderCache, props, setupState, data, ctx))
+    } else {
+      // functional
+      const render = Component
+      result = normalizeVNode(
+        render.length > 1
+          ? render(props, { attrs, slots, emit })
+          : render(props, null as any /* we know it doesn't need it */)
+      )
+    }
+    return result
   }
 
   //渲染函数
