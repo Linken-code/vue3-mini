@@ -1,12 +1,21 @@
-import { ShapeFlags, isFunction, isObject } from '@vue/shared/src'
+import { ShapeFlags, isFunction, isObject, extend } from '@vue/shared'
 import { componentPublicInstance } from './componentPublicInstance'
-import { baseCompile } from '@vue/compiler-core'
 import { createAppContext } from './apiCreateApp'
-import { shallowReactive } from '@vue/reactivity'
+import { pauseTracking, resetTracking, shallowReactive, proxyRefs } from '@vue/reactivity'
 export let currentInstance = null
 
 const emptyAppContext = createAppContext()
 let uid = 0
+let compile
+
+export function registerRuntimeCompiler(_compile: any) {
+  compile = _compile
+}
+
+export function getComponentName(Component): string | undefined {
+  return isFunction(Component) ? Component.displayName || Component.name : Component.name
+}
+
 //创建组件实例
 export const createComponentInstance = (vnode, parent) => {
   const type = vnode.type
@@ -61,9 +70,11 @@ const setupStatefulComponent = instance => {
   //判断组件是否有setup
   if (setup) {
     // 有 setup 再创建执行上下文的实例
-    let setupContext = createSetupContext(instance)
+    const setupContext = (instance.setupContext = setup.length > 1 ? createSetupContext(instance) : null)
     currentInstance = instance
+    pauseTracking()
     const setupResult = setup(instance.props, setupContext)
+    resetTracking()
     //setup执行完毕
     currentInstance = null
     // instance 中 props attrs slots emit expose 会被提取出来，因为开发过程中会使用这些属性
@@ -80,7 +91,7 @@ const handleSetupResult = (instance, setupResult) => {
     instance.render = setupResult
   } else if (isObject(setupResult)) {
     //setup返回的对象保存到实例
-    instance.setupState = setupResult
+    instance.setupState = proxyRefs(setupResult)
   }
   finishComponentSetup(instance)
 }
@@ -89,7 +100,7 @@ const createSetupContext = instance => {
   return {
     attrs: instance.attrs,
     slots: instance.slots,
-    emit: () => {},
+    emit: instance.emit,
     expose: () => {}
   }
 }
@@ -100,17 +111,33 @@ const finishComponentSetup = instance => {
 
   if (!instance.render) {
     // 对template 模板编译产生render函数
-    if (!Component.render && Component.template) {
+    if (!Component.render && compile) {
       // 编译 将结果 赋予给 Component.template
-      let { template } = Component
-      if (template[0] === '#') {
-        const el = document.querySelector(template)
-        template = el ? el.innerHTML : ''
+      // let { template } = Component
+      // if (template[0] === '#') {
+      //   const el = document.querySelector(template)
+      //   template = el ? el.innerHTML : ''
+      // }
+      // Component.render = new Function('ctx', code)
+      const template = Component.template
+      if (template) {
+        const { isCustomElement, compilerOptions } = instance.appContext.config
+        const { delimiters, compilerOptions: componentCompilerOptions } = Component
+
+        const finalCompilerOptions = extend(
+          extend(
+            {
+              isCustomElement,
+              delimiters
+            },
+            compilerOptions
+          ),
+          componentCompilerOptions
+        )
+        Component.render = compile(template, finalCompilerOptions)
       }
-      //const code = baseCompile(template)
-      Component.render = baseCompile(template)
-      //Component.render = new Function('ctx', code)
     }
+
     instance.render = Component.render
   }
 }

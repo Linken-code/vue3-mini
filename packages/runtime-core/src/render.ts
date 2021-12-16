@@ -1,6 +1,6 @@
-import { Text, Fragment, normalizeVNode, createVNode, isSameVnode } from './vnode'
+import { Text, Fragment, Comment, normalizeVNode, createVNode, isSameVnode } from './vnode'
 import { createComponentInstance, setupComponent, initProps } from './component'
-import { ShapeFlags, PatchFlags, invokeArrayFns } from '@vue/shared/src'
+import { ShapeFlags, PatchFlags, invokeArrayFns, isOn } from '@vue/shared'
 import { queueJob, queuePostFlushCb } from './scheduler'
 import { pauseTracking, resetTracking, ReactiveEffect } from '@vue/reactivity'
 import { createAppAPI } from './apiCreateApp'
@@ -29,7 +29,8 @@ const baseCreateRenderer = renderOptionsDom => {
 
     //创建文本
     createText,
-
+    //创建注释
+    createComment,
     //设置文本
     setText,
 
@@ -56,21 +57,31 @@ const baseCreateRenderer = renderOptionsDom => {
         processText(n1, n2, container, anchor)
         break
       // 注释
-      // case Comment:
-      // 	processCommentNode(n1, n2, container, anchor)
-      // 	break;
+      case Comment:
+        processCommentNode(n1, n2, container, anchor)
+        break
       //处理文本
       case Fragment:
         processFragment(n1, n2, container, anchor)
         break
       default:
         // 普通 DOM 元素
-        if (shapeFlag & shapeFlag.ELEMENT) {
+        if (shapeFlag & ShapeFlags.ELEMENT) {
           processElement(n1, n2, container, anchor)
           // 自定义的 Vue 组件
-        } else if (shapeFlag & shapeFlag.COMPONENT) {
+        } else if (shapeFlag & ShapeFlags.COMPONENT) {
           processComponent(n1, n2, container)
         }
+    }
+  }
+
+  //创建注释
+  const processCommentNode = (n1, n2, container, anchor) => {
+    if (n1 == null) {
+      insertElement((n2.el = createComment((n2.children as string) || '')), container, anchor)
+    } else {
+      // there's no support for dynamic comments
+      n2.el = n1.el
     }
   }
 
@@ -135,7 +146,7 @@ const baseCreateRenderer = renderOptionsDom => {
   }
 
   const updateComponent = (n1, n2) => {
-    const instance = (n2.component = n1.component)!
+    const instance = (n2.component = n1.component)
     instance.next = n2
     instance.update()
     // if (shouldUpdateComponent(n1, n2)) {
@@ -450,7 +461,6 @@ const baseCreateRenderer = renderOptionsDom => {
       //判断初始化
       if (!instance.isMounted) {
         // 初次渲染
-        const { el, props } = initialVNode
         const { bm, m } = instance //生命周期
         effect.allowRecurse = false
         if (bm) {
@@ -458,6 +468,7 @@ const baseCreateRenderer = renderOptionsDom => {
           invokeArrayFns(bm)
         }
         effect.allowRecurse = true
+        // mount
         //执行render，返回dom树
         const subTree = (instance.subTree = renderComponentRoot(instance))
         //渲染子树,创建元素
@@ -469,6 +480,7 @@ const baseCreateRenderer = renderOptionsDom => {
           //invokeArrayFns(m)
           queuePostFlushCb(m) //异步处理,不能直接 invokeArrayFns(m);
         }
+        initialVNode = container = anchor = null as any
       } else {
         //更新逻辑
         let { next, bu, u, parent, vnode } = instance
@@ -543,34 +555,53 @@ const baseCreateRenderer = renderOptionsDom => {
       attrs,
       emit,
       render,
-      renderCache,
       data,
       setupState,
       ctx
     } = instance
     let result
-    if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-      // withProxy is a proxy with a different `has` trap only for
-      // runtime-compiled render functions using `with` block.
-      const proxyToUse = withProxy || proxy
-      result = normalizeVNode(render!.call(proxyToUse, proxyToUse!, renderCache, props, setupState, data, ctx))
-    } else {
-      // functional
-      const render = Component
-      result = normalizeVNode(
-        render.length > 1
-          ? render(props, { attrs, slots, emit })
-          : render(props, null as any /* we know it doesn't need it */)
-      )
+    let fallthroughAttrs
+    try {
+      if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+        // withProxy is a proxy with a different `has` trap only for
+        // runtime-compiled render functions using `with` block.
+        const proxyToUse = withProxy || proxy
+        result = normalizeVNode(render.call(proxyToUse, proxyToUse!, props, setupState, data, ctx))
+        // result = normalizeVNode(Component.render(instance.ctx))
+        fallthroughAttrs = attrs
+      } else {
+        // functional
+        const render = Component
+        result = normalizeVNode(
+          render.length > 1
+            ? render(props, { attrs, slots, emit })
+            : render(props, null as any /* we know it doesn't need it */)
+        )
+        fallthroughAttrs = Component.props ? attrs : getFunctionalFallthrough(attrs)
+      }
+    } catch (err) {
+      result = createVNode(Comment)
     }
+    console.log(result)
+
     return result
+  }
+
+  const getFunctionalFallthrough = attrs => {
+    let res
+    for (const key in attrs) {
+      if (key === 'class' || key === 'style' || isOn(key)) {
+        ;(res || (res = {}))[key] = attrs[key]
+      }
+    }
+    return res
   }
 
   //渲染函数
   const render = (vnode, container) => {
     if (vnode == null) {
       if (container._vnode) {
-        unmount(container._vnode)
+        unmount(container._vnode, null)
       }
     } else {
       //渲染

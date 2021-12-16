@@ -1,14 +1,15 @@
 {
-    "name": "@vue/compiler-dom",
-    "version": "1.0.0",
-    "author": "Linken",
-    "main": "index.js",
-    "license": "MIT",
-    "buildOptions": {
-        "name": "VueCompilerDom",
-        "formats": [
-            "esm-bundler",
-            "cjs"
-        ]
-    }
+  "name": "@vue/compiler-dom",
+  "version": "1.0.0",
+  "author": "Linken",
+  "main": "index.js",
+  "license": "MIT",
+  "buildOptions": {
+    "name": "VueCompilerDom",
+    "formats": [
+      "esm-bundler",
+      "cjs",
+      "global"
+    ]
+  }
 }

@@ -1,7 +1,7 @@
 /*
  * @Author: Linken
  * @Date: 2021-11-08 21:16:42
- * @LastEditTime: 2021-12-11 15:22:55
+ * @LastEditTime: 2021-12-12 14:18:01
  * @LastEditors: Linken
  * @Description: 学习vue3源码
  * @FilePath: \vue3-mini\packages\compiler-core\src\index.ts
@@ -9,7 +9,7 @@
  */
 export { baseParse } from './parse'
 export { baseCompile } from './compile'
-export { generate } from './codegen'
+export { generate, CodegenResult } from './codegen'
 
 export * from './ast'
 //console.log(baseParse(`<div class="foo" v-if="ok" >hello {{name}}</div>`));

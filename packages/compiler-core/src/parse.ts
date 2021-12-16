@@ -1,18 +1,23 @@
-import { isHTMLTag, isVoidTag, camelize } from '@vue/shared'
+import { isHTMLTag, isVoidTag, camelize, extend } from '@vue/shared'
 import { NodeTypes, ElementTypes, createRoot } from './ast'
-export const baseParse = content => {
-  const context = createParseContext(content)
+
+const defaultParserOptions = {
+  delimiters: ['{{', '}}'],
+  isHTMLTag,
+  isVoidTag
+}
+
+export const baseParse = (content, options?) => {
+  const context = createParseContext(content, options)
   const children = parseChildren(context)
   return createRoot(children)
 }
 
-const createParseContext = content => {
+const createParseContext = (content, rawOptions = {}) => {
+  const options = extend(rawOptions, defaultParserOptions)
+
   return {
-    options: {
-      delimiters: ['{{', '}}'],
-      isHTMLTag,
-      isVoidTag
-    },
+    options,
     source: content
   }
 }
@@ -26,8 +31,10 @@ const parseChildren = context => {
       //parseInterpolation
       node = parseInterpolation(context)
     } else if (s[0] === '<') {
-      //parseElement
-      node = parseElement(context)
+      if (/[a-z]/i.test(s[1])) {
+        //parseElement
+        node = parseElement(context)
+      }
     } else {
       //parseText
       node = parseText(context)
@@ -48,8 +55,6 @@ const parseChildren = context => {
         if (
           !prev ||
           !next ||
-          prev.type === NodeTypes.COMMENT ||
-          next.type === NodeTypes.COMMENT ||
           (prev.type === NodeTypes.ELEMENT && next.type === NodeTypes.ELEMENT && /[\r\n]/.test(node.content))
         ) {
           //删除空白节点
@@ -67,11 +72,16 @@ const parseChildren = context => {
 const parseInterpolation = context => {
   const [open, close] = context.options.delimiters
   advanceBy(context, open.length)
-  const closeIndex = context.source.indexOf(close)
+  const closeIndex = context.source.indexOf(close, open.length)
   const content = parseTextData(context, closeIndex).trim()
   advanceBy(context, close.length)
   return {
     type: NodeTypes.SIMPLE_EXPRESSION,
+    // content: {
+    //   type: NodeTypes.SIMPLE_EXPRESSION,
+    //   isStatic: false,
+    //   content
+    // },
     content,
     isStatic: false
   }
@@ -116,8 +126,12 @@ const parseTag = context => {
 const parseAttributes = context => {
   const props = []
   const directives = []
-  while (context.source.length && !context.source.startsWith('>') && !context.source.startsWith('/>')) {
+  while (context.source.length && !startsWith(context.source, '>') && !startsWith(context.source, '/>')) {
     let attr = parseAttribute(context)
+    if (attr.type === NodeTypes.ATTRIBUTE && attr.value && attr.name === 'class') {
+      attr.value.content = attr.value.content.replace(/\s+/g, ' ').trim()
+    }
+
     if (attr.type === NodeTypes.DIRECTIVE) {
       directives.push(attr)
     } else {
@@ -131,10 +145,10 @@ const parseAttribute = context => {
   const match = /^[^\t\r\n\f />][^\t\r\n\f />=]*/.exec(context.source)
   const name = match[0]
   advanceBy(context, name.length)
-  advanceSpaces(context)
 
-  let value
-  if (context.source[0] === '=') {
+  let value = undefined
+  if (/^[\t\r\n\f ]*=/.test(context.source)) {
+    advanceSpaces(context)
     advanceBy(context, 1)
     advanceSpaces(context)
     value = parseAttributeValue(context)
@@ -142,17 +156,57 @@ const parseAttribute = context => {
   }
 
   //directives
-  if (/^(:|@|v-)/.test(name)) {
-    let dirName, argContent
-    if (name[0] === ':') {
-      dirName = 'bind'
-      argContent = name.slice(1)
-    } else if (name[0] === '@') {
-      dirName = 'on'
-      argContent = name.slice(1)
-    } else if (name.startsWith('v-')) {
-      ;[dirName, argContent] = name.slice(2).split(':')
+  if (/^(v-[A-Za-z0-9-]|:|\.|@|#)/.test(name)) {
+    const match = /(?:^v-([a-z0-9-]+))?(?:(?::|^\.|^@|^#)(\[[^\]]+\]|[^\.]+))?(.+)?$/i.exec(name)!
+
+    let isPropShorthand = startsWith(name, '.')
+    let dirName =
+      match[1] || (isPropShorthand || startsWith(name, ':') ? 'bind' : startsWith(name, '@') ? 'on' : 'slot')
+
+    let arg
+    if (match[2]) {
+      const isSlot = dirName === 'slot'
+      let content = match[2]
+      let isStatic = true
+      if (content.startsWith('[')) {
+        isStatic = false
+
+        if (!content.endsWith(']')) {
+          content = content.slice(1)
+        } else {
+          content = content.slice(1, content.length - 1)
+        }
+      } else if (isSlot) {
+        // #1241 special case for v-slot: vuetify relies extensively on slot
+        // names containing dots. v-slot doesn't have any modifiers and Vue 2.x
+        // supports such usage so we are keeping it consistent with 2.x.
+        content += match[3] || ''
+      }
+
+      arg = {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: camelize(content),
+        isStatic
+      }
     }
+
+    // if (name[0] === ':') {
+    //   dirName = 'bind'
+    //   content = name.slice(1)
+    // } else if (name[0] === '@') {
+    //   dirName = 'on'
+    //   content = name.slice(1)
+    // } else if (name.startsWith('v-')) {
+    //   ;[dirName, content] = name.slice(2).split(':')
+    // }
+    //  arg: content && {
+    //    type: NodeTypes.SIMPLE_EXPRESSION,
+    //    content: camelize(content),
+    //    isStatic: true
+    //  }
+    const modifiers = match[3] ? match[3].slice(1).split('.') : []
+    if (isPropShorthand) modifiers.push('prop')
+
     return {
       type: NodeTypes.DIRECTIVE,
       name: dirName,
@@ -161,11 +215,8 @@ const parseAttribute = context => {
         content: value.content,
         isStatic: false
       },
-      arg: argContent && {
-        type: NodeTypes.SIMPLE_EXPRESSION,
-        content: camelize(argContent),
-        isStatic: true
-      }
+      arg,
+      modifiers
     }
   }
 
@@ -182,10 +233,16 @@ const parseAttribute = context => {
 
 const parseAttributeValue = context => {
   const quote = context.source[0]
-  advanceBy(context, 1)
-  const endIndex = context.source.indexOf(quote)
-  const content = parseTextData(context, endIndex)
-  advanceBy(context, 1)
+  const isQuoted = quote === `"` || quote === `'`
+  let content
+  //有引号
+  if (isQuoted) {
+    advanceBy(context, 1)
+    const endIndex = context.source.indexOf(quote)
+    content = parseTextData(context, endIndex)
+    advanceBy(context, 1)
+  }
+
   return {
     content
   }
@@ -222,7 +279,7 @@ const parseTextData = (context, length) => {
 
 const isEnd = context => {
   const s = context.source
-  return s.startsWith('</') || !s
+  return startsWith(s, '</') || !s
 }
 
 const advanceBy = (context, numberOfChar) => {
@@ -234,4 +291,8 @@ const advanceSpaces = context => {
   if (match) {
     advanceBy(context, match[0].length)
   }
+}
+
+const startsWith = (source: string, searchString: string) => {
+  return source.startsWith(searchString)
 }

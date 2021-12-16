@@ -1,7 +1,7 @@
 /*
  * @Author: Linken
  * @Date: 2021-11-08 19:18:07
- * @LastEditTime: 2021-12-09 20:24:28
+ * @LastEditTime: 2021-12-12 16:48:23
  * @LastEditors: Linken
  * @Description: 学习vue3源码
  * @FilePath: \vue3-mini\packages\runtime-core\src\scheduler.ts
@@ -15,7 +15,7 @@ const resolvedPromise = Promise.resolve()
 const pendingPostFlushCbs = []
 let activePostFlushCbs = null
 let postFlushIndex = 0
-
+let flushIndex = 0
 export const queueJob = job => {
   if (!queue.length || !queue.includes(job)) {
     queue.push(job)
@@ -51,6 +51,13 @@ export const nextTick = (fn?) => {
 export const queuePostFlushCb = cb => {
   //  cb 可能是一个数组
   queueCb(cb, activePostFlushCbs, pendingPostFlushCbs, postFlushIndex)
+}
+
+export function invalidateJob(job) {
+  const i = queue.indexOf(job)
+  if (i > flushIndex) {
+    queue.splice(i, 1)
+  }
 }
 
 const queueCb = (cb?, activeQueue?, pendingQueue?, index?: number) => {

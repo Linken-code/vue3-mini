@@ -1,7 +1,7 @@
 /*
  * @Author: Linken
  * @Date: 2021-11-09 19:23:14
- * @LastEditTime: 2021-12-09 21:48:47
+ * @LastEditTime: 2021-12-11 21:05:39
  * @LastEditors: Linken
  * @Description: 学习vue3源码
  * @FilePath: \vue3-mini\packages\compiler-core\src\ast.ts
@@ -51,6 +51,8 @@ export const enum ElementTypes {
 export const createRoot = children => {
   return {
     type: NodeTypes.ROOT,
-    children
+    children,
+    components: [],
+    directives: []
   }
 }

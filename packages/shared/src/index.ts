@@ -1,7 +1,7 @@
 /*
  * @Author: Linken
  * @Date: 2021-10-24 10:42:03
- * @LastEditTime: 2021-12-11 14:24:23
+ * @LastEditTime: 2021-12-12 23:11:15
  * @LastEditors: Linken
  * @Description: 学习vue3源码
  * @FilePath: \vue3-mini\packages\shared\src\index.ts
@@ -20,7 +20,8 @@ export * from './domAttrConfig'
 
 export const IsDEV = false
 export const isObject = (val: unknown): val is Record<any, any> => val !== null && typeof val === 'object'
-
+const onRE = /^on[^a-z]/
+export const isOn = (key: string) => onRE.test(key)
 export const extend = Object.assign
 export const objectToString = Object.prototype.toString
 export const toTypeString = (value: unknown): string => objectToString.call(value)

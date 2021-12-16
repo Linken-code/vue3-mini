@@ -1,0 +1,48 @@
+<!--
+ * @Author: Linken
+ * @Date: 2021-12-11 15:24:16
+ * @LastEditTime: 2021-12-16 22:39:31
+ * @LastEditors: Linken
+ * @Description: 学习vue3源码
+ * @FilePath: \vue3-mini\examples\test4.html
+ * 仿写vue3源码，实现vue3-mini
+-->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>vue3-mini</title>
+    <script src="./dist/vue.global.js"></script>
+  </head>
+
+  <body>
+    <div id="app">
+      <span>Counter: {{ counter.value }}</span>
+      <span>State:{{state.age}}</span>
+    </div>
+  </body>
+
+  <script>
+    const { createApp, ref, reactive } = VueMini
+    createApp({
+      setup(props, ctx) {
+        const counter = ref(10)
+        const state = reactive({
+          age: 20
+        })
+        const onAdd = () => {
+          console.log(123)
+        }
+        const itemList = reactive([{ name: '1' }, { name: '2' }, { name: '3' }, { name: '4' }])
+        return {
+          counter,
+          state,
+          onAdd,
+          itemList
+        }
+      }
+    }).mount('#app')
+  </script>
+</html>

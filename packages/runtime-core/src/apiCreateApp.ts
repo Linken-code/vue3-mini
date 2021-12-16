@@ -1,7 +1,7 @@
 /*
  * @Author: Linken
  * @Date: 2021-10-29 21:20:52
- * @LastEditTime: 2021-12-07 22:32:48
+ * @LastEditTime: 2021-12-15 23:52:18
  * @LastEditors: Linken
  * @Description: 学习vue3源码
  * @FilePath: \vue3-mini\packages\runtime-core\src\apiCreateApp.ts
@@ -34,7 +34,7 @@ export const createAppAPI = render => {
     // 创建vue应用上下文，上下文主要包括 应用本身，设置项，组件、指令注册仓库、混入
     const context = createAppContext()
     let isMounted = false
-    const app = {
+    const app = (context.app = {
       _uid: uid++,
       _props: rootProps, // 属性
       _component: rootComponent, // 组件
@@ -46,7 +46,7 @@ export const createAppAPI = render => {
         return context.config
       },
       // 全局组件注册，入参为组件名、组件options
-      component(name: string, component): any {
+      component(name: string, component?): any {
         if (!component) {
           return context.components[name]
         }
@@ -81,8 +81,8 @@ export const createAppAPI = render => {
           render(null, app._container)
         }
       }
-    }
-    context.app = app
+    })
+
     return app
   }
 }

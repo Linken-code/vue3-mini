@@ -1,7 +1,7 @@
 /*
  * @Author: Linken
  * @Date: 2021-10-24 14:26:33
- * @LastEditTime: 2021-12-11 15:23:16
+ * @LastEditTime: 2021-12-12 14:39:24
  * @LastEditors: Linken
  * @Description: 学习vue3源码
  * @FilePath: \vue3-mini\scripts\dev.js
@@ -20,7 +20,7 @@ const build = async target => {
 }
 
 //打包单个模块
-build('compiler-core')
+build('vue')
   .then(() => {
     //promise
     console.log('打包成功')

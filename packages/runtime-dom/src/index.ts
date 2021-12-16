@@ -1,7 +1,7 @@
 /*
  * @Author: Linken
  * @Date: 2021-10-28 22:57:37
- * @LastEditTime: 2021-12-09 20:39:26
+ * @LastEditTime: 2021-12-12 19:00:25
  * @LastEditors: Linken
  * @Description: 学习vue3源码
  * @FilePath: \vue3-mini\packages\runtime-dom\src\index.ts
@@ -30,7 +30,7 @@ export const render = (...args) => {
 
 // vue中 runtime-core 提供了核心的方法，用来处理渲染的，他会使用runtime-dom 中的 api 进行渲染
 export function createApp(rootComponent, rootProps = null) {
-  const app = createRenderer(rendererOptions).createApp(rootComponent, rootProps)
+  const app = ensureRenderer().createApp(rootComponent, rootProps)
   const { mount } = app
   app.mount = containerOrSelector => {
     // 获取 DOM 容器节点
