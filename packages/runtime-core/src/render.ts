@@ -159,7 +159,7 @@ const baseCreateRenderer = renderOptionsDom => {
   //创建真实节点
   const mountElement = (vnode, container, anchor) => {
     // 创建节点保存到vnode中 递归渲染
-    const { props, shapeFlag, patchFlag, type, children } = vnode
+    const { props, shapeFlag, type, children } = vnode
     //获取真实元素
     let el = (vnode.el = createElement(type))
     //有子元素
@@ -472,6 +472,8 @@ const baseCreateRenderer = renderOptionsDom => {
         //执行render，返回dom树
         const subTree = (instance.subTree = renderComponentRoot(instance))
         //渲染子树,创建元素
+        console.log(subTree)
+
         patch(null, subTree, container, anchor) // 渲染子树
         initialVNode.el = subTree.el // 组件的el和子树的el是同一个
         instance.isMounted = true // 组件已经挂载完毕
@@ -566,8 +568,8 @@ const baseCreateRenderer = renderOptionsDom => {
         // withProxy is a proxy with a different `has` trap only for
         // runtime-compiled render functions using `with` block.
         const proxyToUse = withProxy || proxy
-        result = normalizeVNode(render.call(proxyToUse, proxyToUse!, props, setupState, data, ctx))
-        // result = normalizeVNode(Component.render(instance.ctx))
+        result = normalizeVNode(render!.call(proxyToUse, proxyToUse!, props, setupState, data, ctx))
+        // result = normalizeVNode(Component.render)
         fallthroughAttrs = attrs
       } else {
         // functional
@@ -582,8 +584,6 @@ const baseCreateRenderer = renderOptionsDom => {
     } catch (err) {
       result = createVNode(Comment)
     }
-    console.log(result)
-
     return result
   }
 

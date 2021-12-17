@@ -3,7 +3,7 @@ import { isString, isObject, isArray, ShapeFlags, isFunction } from '@vue/shared
 export const isVNode = value => {
   return value ? value.__v_isVNode === true : false
 }
-export const Text = Symbol('text')
+export const Text = Symbol('Text')
 export const Fragment = Symbol('Fragment')
 export const Comment = Symbol('Comment')
 export const Static = Symbol('Static')
@@ -26,7 +26,8 @@ export function normalizeVNode(child) {
       Fragment,
       null,
       // #3666, avoid reference pollution when reusing vnode
-      child.slice()
+      // child.slice()
+      child
     )
   } else if (isObject(child)) {
     // already vnode, this should be the most common since compiled templates
@@ -97,6 +98,7 @@ export const createVNode = (type, props?, children?, patchFlag: number = 0) => {
   } else {
     shapeFlag = 0
   }
+
   const vnode = createBaseVNode(type, props, children, patchFlag, shapeFlag)
   if (isVNode(type)) {
     if (children) {
@@ -127,6 +129,9 @@ const createBaseVNode = (
     patchFlag,
     shapeFlag, //类型标识
     appContext: null
+  }
+  if (children) {
+    vnode.shapeFlag |= isString(children) ? ShapeFlags.TEXT_CHILDREN : ShapeFlags.ARRAY_CHILDREN
   }
   return vnode
 }

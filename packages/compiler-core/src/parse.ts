@@ -105,11 +105,8 @@ const parseTag = context => {
   const tag = match[1]
   advanceBy(context, match[0].length)
   advanceSpaces(context)
-
   const { props, directives } = parseAttributes(context)
-
   const tagType = isComponent(tag, context) ? ElementTypes.ELEMENT : ElementTypes.COMPONENT
-
   const isSelfClosing = context.source.startsWith('/>')
   advanceBy(context, isSelfClosing ? 2 : 1)
   return {

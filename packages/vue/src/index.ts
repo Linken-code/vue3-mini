@@ -2,7 +2,7 @@ import { Fragment } from './../../runtime-core/src/vnode'
 /*
  * @Author: Linken
  * @Date: 2021-11-11 22:55:38
- * @LastEditTime: 2021-12-16 22:49:21
+ * @LastEditTime: 2021-12-17 22:20:37
  * @LastEditors: Linken
  * @Description: 学习vue3源码
  * @FilePath: \vue3-mini\packages\vue\src\index.ts
@@ -23,12 +23,12 @@ function compileToFunction(template: string, options?) {
     ...options
   })
   const result = `with(ctx){
+     const { h, Text, Fragment, renderList, resolveComponent, withModel } = VueMini
     return  ${code}  
   }`
+
   const render = new Function('ctx', result)
   //   const render = (__GLOBAL__ ? new Function(code)() : new Function('Vue', code)(runtimeDom)) as RenderFunction
-  console.log(render)
-
   return render
 }
 
