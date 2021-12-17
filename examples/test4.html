@@ -1,7 +1,7 @@
 <!--
  * @Author: Linken
  * @Date: 2021-12-11 15:24:16
- * @LastEditTime: 2021-12-17 23:06:20
+ * @LastEditTime: 2021-12-17 23:08:35
  * @LastEditors: Linken
  * @Description: 学习vue3源码
  * @FilePath: \vue3-mini\examples\test4.html
@@ -20,7 +20,7 @@
   <body>
     <div id="app">
       <div id="container">Counter: {{ counter }}</div>
-      <span class="label">State:{{state.age}}</span>
+      <span class="label" @click="onAdd">State:{{state.age}}</span>
     </div>
   </body>
 

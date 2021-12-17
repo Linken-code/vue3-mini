@@ -568,8 +568,6 @@ const baseCreateRenderer = renderOptionsDom => {
         const proxyToUse = withProxy || proxy
         //参数不能为空
         result = normalizeVNode(render.call(proxyToUse, setupState, ctx))
-        console.log(result)
-
         fallthroughAttrs = attrs
       } else {
         // functional

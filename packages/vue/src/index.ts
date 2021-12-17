@@ -2,7 +2,7 @@ import { Fragment } from './../../runtime-core/src/vnode'
 /*
  * @Author: Linken
  * @Date: 2021-11-11 22:55:38
- * @LastEditTime: 2021-12-17 22:56:58
+ * @LastEditTime: 2021-12-17 23:10:09
  * @LastEditors: Linken
  * @Description: 学习vue3源码
  * @FilePath: \vue3-mini\packages\vue\src\index.ts
@@ -22,11 +22,8 @@ function compileToFunction(template: string, options?) {
     hoistStatic: true,
     ...options
   })
-  console.log(code)
-
   const result = `with(ctx){
-     const { h, Text, Fragment, renderList, resolveComponent, withModel } = VueMini
-     console.log(ctx);
+     const { h, Text, Fragment, renderList, resolveComponent } = VueMini
     return  ${code}  
   }`
 
