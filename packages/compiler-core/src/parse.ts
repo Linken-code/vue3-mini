@@ -76,14 +76,13 @@ const parseInterpolation = context => {
   const content = parseTextData(context, closeIndex).trim()
   advanceBy(context, close.length)
   return {
-    type: NodeTypes.SIMPLE_EXPRESSION,
-    // content: {
-    //   type: NodeTypes.SIMPLE_EXPRESSION,
-    //   isStatic: false,
-    //   content
-    // },
-    content,
-    isStatic: false
+    type: NodeTypes.INTERPOLATION,
+    content: {
+      type: NodeTypes.SIMPLE_EXPRESSION,
+      isStatic: false,
+      // Set `isConstant` to false by default and will decide in transformExpression
+      content
+    }
   }
 }
 

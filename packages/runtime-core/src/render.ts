@@ -472,8 +472,6 @@ const baseCreateRenderer = renderOptionsDom => {
         //执行render，返回dom树
         const subTree = (instance.subTree = renderComponentRoot(instance))
         //渲染子树,创建元素
-        console.log(subTree)
-
         patch(null, subTree, container, anchor) // 渲染子树
         initialVNode.el = subTree.el // 组件的el和子树的el是同一个
         instance.isMounted = true // 组件已经挂载完毕
@@ -568,8 +566,10 @@ const baseCreateRenderer = renderOptionsDom => {
         // withProxy is a proxy with a different `has` trap only for
         // runtime-compiled render functions using `with` block.
         const proxyToUse = withProxy || proxy
-        result = normalizeVNode(render!.call(proxyToUse, proxyToUse!, props, setupState, data, ctx))
-        // result = normalizeVNode(Component.render)
+        //参数不能为空
+        result = normalizeVNode(render.call(proxyToUse, setupState, ctx))
+        console.log(result)
+
         fallthroughAttrs = attrs
       } else {
         // functional
