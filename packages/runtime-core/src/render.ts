@@ -91,7 +91,10 @@ const baseCreateRenderer = renderOptionsDom => {
       //创建文本，渲染到页面
       insertElement((n2.el = createText(n2.children)), container, anchor)
     } else {
-      setText(n2, container)
+      const el = (n2.el = n1.el!)
+      if (n2.children !== n1.children) {
+        setText(el, n2.children as string)
+      }
     }
   }
 
@@ -503,7 +506,7 @@ const baseCreateRenderer = renderOptionsDom => {
         //旧节点
         const prevTree = instance.subTree
         //新节点
-        const nextTree = instance.render.call(proxy, proxy)
+        const nextTree = renderComponentRoot(instance)
         //替换节点
         instance.subTree = nextTree
         //对比新旧节点
