@@ -1,14 +1,14 @@
 /*
  * @Author: Linken
  * @Date: 2021-10-29 21:20:52
- * @LastEditTime: 2021-12-15 23:52:18
+ * @LastEditTime: 2021-12-24 20:58:47
  * @LastEditors: Linken
  * @Description: 学习vue3源码
  * @FilePath: \vue3-mini\packages\runtime-core\src\apiCreateApp.ts
  * 仿写vue3源码，实现vue3-mini
  */
 import { createVNode } from './vnode'
-
+import { isFunction } from '@vue/shared'
 export const createAppContext = () => {
   return {
     app: null as any,
@@ -33,6 +33,8 @@ export const createAppAPI = render => {
   return function createApp(rootComponent, rootProps = null) {
     // 创建vue应用上下文，上下文主要包括 应用本身，设置项，组件、指令注册仓库、混入
     const context = createAppContext()
+    const installedPlugins = new Set()
+
     let isMounted = false
     const app = (context.app = {
       _uid: uid++,
@@ -45,6 +47,19 @@ export const createAppAPI = render => {
       get config() {
         return context.config
       },
+
+      //app.use()方法
+      use(plugin, ...options: any[]) {
+        if (plugin && isFunction(plugin.install)) {
+          installedPlugins.add(plugin)
+          plugin.install(app, ...options)
+        } else if (isFunction(plugin)) {
+          installedPlugins.add(plugin)
+          plugin(app, ...options)
+        }
+        return app
+      },
+
       // 全局组件注册，入参为组件名、组件options
       component(name: string, component?): any {
         if (!component) {
