@@ -7,7 +7,7 @@
  * @FilePath: \vue3-mini\packages\runtime-core\src\scheduler.ts
  * 仿写vue3源码，实现vue3-mini
  */
-import { isArray } from '@vue/shared/src'
+import { isArray } from '@vue/shared'
 const queue = []
 let isFlushing = false
 let currentFlushPromise = null

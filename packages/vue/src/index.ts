@@ -1,8 +1,7 @@
-import { Fragment } from './../../runtime-core/src/vnode'
 /*
  * @Author: Linken
  * @Date: 2021-11-11 22:55:38
- * @LastEditTime: 2021-12-17 23:10:09
+ * @LastEditTime: 2021-12-27 20:37:14
  * @LastEditors: Linken
  * @Description: 学习vue3源码
  * @FilePath: \vue3-mini\packages\vue\src\index.ts
@@ -28,7 +27,7 @@ function compileToFunction(template: string, options?) {
   }`
 
   const render = new Function('ctx', result)
-  //   const render = (__GLOBAL__ ? new Function(code)() : new Function('Vue', code)(runtimeDom)) as RenderFunction
+  // const render = (__GLOBAL__ ? new Function(code)() : new Function('Vue', code)(runtimeDom)) as RenderFunction
   return render
 }
 

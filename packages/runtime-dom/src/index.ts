@@ -1,15 +1,15 @@
 /*
  * @Author: Linken
  * @Date: 2021-10-28 22:57:37
- * @LastEditTime: 2021-12-12 19:00:25
+ * @LastEditTime: 2021-12-27 20:47:44
  * @LastEditors: Linken
  * @Description: 学习vue3源码
  * @FilePath: \vue3-mini\packages\runtime-dom\src\index.ts
  * 仿写vue3源码，实现vue3-mini
  */
 // runtime-dom 操作节点、操作属性更新
-import { createRenderer } from '@vue/runtime-core/src'
-import { extend, isFunction, isString } from '@vue/shared/src'
+import { createRenderer } from '@vue/runtime-core'
+import { extend, isFunction, isString } from '@vue/shared'
 import { nodeOps } from './nodeOps' // 对象
 import { patchProps } from './patchProp' // 方法
 // re-export everything from core

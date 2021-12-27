@@ -1,6 +1,6 @@
 import { trackEffects, triggerEffects, isTracking } from './effect'
 import { TrackOpType, TriggerTypes } from './operations'
-import { hasChange, isArray, isObject, IsDEV } from '@vue/shared/src'
+import { hasChange, isArray, isObject, IsDEV } from '@vue/shared'
 import { reactive, toRaw, isReactive } from './reactive'
 import { createDep } from './dep'
 

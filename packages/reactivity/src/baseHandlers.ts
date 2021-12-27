@@ -8,7 +8,7 @@
  * 仿写vue3源码，实现vue3-mini
  */
 import { reactive, readonly } from './reactive'
-import { isObject, hasOwn, isInteger, isArray, hasChange } from '@vue/shared/src'
+import { isObject, hasOwn, isInteger, isArray, hasChange } from '@vue/shared'
 import { Track, Trigger } from './effect'
 import { TrackOpType, TriggerTypes } from './operations'
 //getter

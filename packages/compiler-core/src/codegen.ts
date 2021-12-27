@@ -1,5 +1,5 @@
 import { NodeTypes, ElementTypes } from './ast'
-import { capitalize } from '@vue/shared/src'
+import { capitalize } from '@vue/shared'
 
 export interface CodegenResult {
   code: string

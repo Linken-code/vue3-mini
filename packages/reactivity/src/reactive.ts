@@ -1,13 +1,13 @@
 /*
  * @Author: Linken
  * @Date: 2021-10-24 20:41:53
- * @LastEditTime: 2021-12-12 16:11:05
+ * @LastEditTime: 2021-12-27 20:48:14
  * @LastEditors: Linken
  * @Description: 学习vue3源码
  * @FilePath: \vue3-mini\packages\reactivity\src\reactive.ts
  * 仿写vue3源码，实现vue3-mini
  */
-import { isObject } from '@vue/shared/src'
+import { isObject } from '@vue/shared'
 import { reactiveHandlers, shallowReactiveHandlers, readonlyHandlers, shallowReadonlyHandlers } from './baseHandlers'
 
 const reactiveMap = new WeakMap() //key 必须是对象，自动垃圾回收，不会造成内存泄漏
